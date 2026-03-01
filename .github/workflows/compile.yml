@@ -19,7 +19,7 @@ jobs:
 
       - name: Initialize Arduino CLI Config
         run: |
-          arduino-cli config init
+          arduino-cli config init --overwrite
           arduino-cli config set library.enable_unsafe_install true
 
       - name: Install ESP32 Platform
@@ -37,10 +37,6 @@ jobs:
 
       - name: Install Libraries
         run: |
-          # Enable unsafe install for git URLs
-          arduino-cli config init
-          arduino-cli config set library.enable_unsafe_install true
-
           # Install Mathieu Carbou's forks for ESP32 Core 3.x / ESP-IDF 5 compatibility
           arduino-cli lib install --git-url https://github.com/ESP32Async/AsyncTCP.git
           arduino-cli lib install --git-url https://github.com/ESP32Async/ESPAsyncWebServer.git
