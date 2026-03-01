@@ -41,9 +41,9 @@ jobs:
 
       - name: Compile Sketch
         run: |
-          # Core 3.0.0 uses 'sixteenmb' as the internal key for the 16MB partition scheme
-          # We also explicitly point to the local partitions.csv using absolute path or relative to the sketch
-          arduino-cli compile --fqbn esp32:esp32:esp32s3:FlashSize=16M,PartitionScheme=sixteenmb,PSRAM=opi,CDCOnBoot=enabled \
-            --build-property "build.partitions=partitions" \
-            --build-property "build.custom_partitions=partitions" \
+          # Copy partitions.csv to the root where arduino-cli is more likely to find it as an override
+          cp src/KoClicker/partitions.csv .
+          # In Core 3.0.0, CDCOnBoot=1 corresponds to 'Enabled'
+          # PartitionScheme=sixteenmb is the 16MB scheme
+          arduino-cli compile --fqbn esp32:esp32:esp32s3:FlashSize=16M,PartitionScheme=sixteenmb,PSRAM=opi,CDCOnBoot=1 \
             src/KoClicker/KoClicker.ino
