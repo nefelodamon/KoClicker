@@ -27,9 +27,9 @@ jobs:
           arduino-cli core update-index --additional-urls https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
           arduino-cli core install esp32:esp32 --additional-urls https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
 
-      - name: Board Details Debug
+      - name: List Files Debug
         run: |
-          arduino-cli board details -b esp32:esp32:esp32s3
+          ls -R
 
       - name: Install Libraries
         run: |
@@ -41,9 +41,9 @@ jobs:
 
       - name: Compile Sketch
         run: |
-          # Copy partitions.csv to the root where arduino-cli is more likely to find it as an override
-          cp src/KoClicker/partitions.csv .
-          # In Core 3.0.0, CDCOnBoot=1 corresponds to 'Enabled'
-          # PartitionScheme=sixteenmb is the 16MB scheme
-          arduino-cli compile --fqbn esp32:esp32:esp32s3:FlashSize=16M,PartitionScheme=sixteenmb,PSRAM=opi,CDCOnBoot=1 \
+          # Copy partitions.csv to the sketch folder where arduino-cli core 3.0 looks for it
+          cp src/KoClicker/partitions.csv src/KoClicker/
+          # In Core 3.0.x, CDCOnBoot=1 corresponds to 'Enabled'
+          # default_8MB is a known key for 8MB, we use it as a base for 16MB custom partitions
+          arduino-cli compile --fqbn esp32:esp32:esp32s3:FlashSize=16M,PartitionScheme=default_8MB,PSRAM=opi,CDCOnBoot=1 \
             src/KoClicker/KoClicker.ino
