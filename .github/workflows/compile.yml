@@ -45,7 +45,10 @@ jobs:
 
       - name: Compile Sketch
         run: |
-          # In Core 3.0.x, CDCOnBoot=cdc corresponds to 'Enabled'
-          # PartitionScheme=sixteenmb is the 16MB scheme
-          arduino-cli compile --fqbn esp32:esp32:esp32s3:FlashSize=16M,PartitionScheme=sixteenmb,PSRAM=opi,CDCOnBoot=cdc \
+          # In Core 3.0.x, the internal keys are:
+          # PartitionScheme=custom (to use local partitions.csv in sketch folder)
+          # CDCOnBoot=cdc (Enabled)
+          # FlashMode=opi (Octal SPI, standard for N16R8 modules like T7-S3)
+          # PSRAM=opi (Octal PSRAM)
+          arduino-cli compile --fqbn esp32:esp32:esp32s3:FlashSize=16M,PartitionScheme=custom,PSRAM=opi,CDCOnBoot=cdc,FlashMode=opi \
             src/KoClicker/KoClicker.ino
