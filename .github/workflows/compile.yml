@@ -39,9 +39,10 @@ jobs:
         run: |
           arduino-cli lib install "ElegantOTA"
           arduino-cli lib install "ArduinoJson"
-          # These are not in the official library manager or names vary; GitHub URLs are more reliable
-          arduino-cli lib install --git-url https://github.com/me-no-dev/AsyncTCP.git
-          arduino-cli lib install --git-url https://github.com/me-no-dev/ESPAsyncWebServer.git
+          # Use Mathieu Carbou's forks for ESP32 Core 3.x / ESP-IDF 5 compatibility
+          # These fix the 'md5.h' missing error and other breaking changes
+          arduino-cli lib install --git-url https://github.com/mathieucarbou/AsyncTCP.git
+          arduino-cli lib install --git-url https://github.com/mathieucarbou/ESPAsyncWebServer.git
 
       - name: Compile Sketch
         run: |
