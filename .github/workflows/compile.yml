@@ -37,26 +37,30 @@ jobs:
 
       - name: Install Libraries
         run: |
-          # Use the official ESP32Async organization's forks for ESP32 Core 3.x / ESP-IDF 5 compatibility
-          # These fix the 'md5.h' missing error and other breaking changes
+          # Initialize config and enable unsafe install for git URLs
+          arduino-cli config init
+          arduino-cli config set library.enable_unsafe_install true
+
           # Remove any potential default libraries first to avoid conflicts
           rm -rf /home/runner/Arduino/libraries/ESP_Async_WebServer
+          rm -rf /home/runner/Arduino/libraries/ESP_Async_Web_Server
           rm -rf /home/runner/Arduino/libraries/AsyncTCP
           
+          # Install Mathieu Carbou's forks for ESP32 Core 3.x / ESP-IDF 5 compatibility
           arduino-cli lib install --git-url https://github.com/ESP32Async/AsyncTCP.git
           arduino-cli lib install --git-url https://github.com/ESP32Async/ESPAsyncWebServer.git
           
+          # Install other libraries
           arduino-cli lib install "ElegantOTA"
           arduino-cli lib install "ArduinoJson"
 
+      - name: List Libraries Debug
+        run: |
+          ls -R /home/runner/Arduino/libraries
+
       - name: Compile Sketch
         run: |
-          # In Core 3.0.x, the internal keys are:
-          # PartitionScheme=custom (to use local partitions.csv in sketch folder)
-          # CDCOnBoot=cdc (Enabled)
-          # FlashMode=opi (Octal SPI, standard for N16R8 modules like T7-S3)
-          # PSRAM=opi (Octal PSRAM)
-          # ELEGANTOTA_USE_ASYNC_WEBSERVER=1 is required for ElegantOTA to work with ESPAsyncWebServer
-          arduino-cli compile --fqbn esp32:esp32:esp32s3:FlashSize=16M,PartitionScheme=custom,PSRAM=opi,CDCOnBoot=cdc,FlashMode=opi \
+          # Use verbose output to catch exactly where headers are being pulled from
+          arduino-cli compile --verbose --fqbn esp32:esp32:esp32s3:FlashSize=16M,PartitionScheme=custom,PSRAM=opi,CDCOnBoot=cdc,FlashMode=opi \
             --build-property "build.extra_flags=-DELEGANTOTA_USE_ASYNC_WEBSERVER=1" \
             src/KoClicker/KoClicker.ino
