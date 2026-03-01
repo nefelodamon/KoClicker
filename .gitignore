@@ -1,0 +1,22 @@
+# Arduino
+build/
+bin/
+*.elf
+*.hex
+*.bin
+*.map
+*.o
+*.a
+*.d
+*.i
+*.s
+
+# VS Code
+.vscode/
+.history/
+
+# Environment
+.env
+
+# MacOS
+.DS_Store
