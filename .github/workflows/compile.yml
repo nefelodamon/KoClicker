@@ -37,20 +37,17 @@ jobs:
 
       - name: Install Libraries
         run: |
-          # Initialize config and enable unsafe install for git URLs
-          arduino-cli config init
-          arduino-cli config set library.enable_unsafe_install true
-
-          # Remove any potential default libraries first to avoid conflicts
-          rm -rf /home/runner/Arduino/libraries/ESP_Async_WebServer
-          rm -rf /home/runner/Arduino/libraries/ESP_Async_Web_Server
-          rm -rf /home/runner/Arduino/libraries/AsyncTCP
+          mkdir -p /home/runner/Arduino/libraries
+          cd /home/runner/Arduino/libraries
           
-          # Install Mathieu Carbou's forks for ESP32 Core 3.x / ESP-IDF 5 compatibility
-          arduino-cli lib install --git-url https://github.com/ESP32Async/AsyncTCP.git
-          arduino-cli lib install --git-url https://github.com/ESP32Async/ESPAsyncWebServer.git
+          # Remove any potential existing libraries
+          rm -rf AsyncTCP ESP_Async_WebServer ESPAsyncWebServer ElegantOTA ArduinoJson
           
-          # Install other libraries
+          # Manually clone the compatible forks to ensure they are used
+          git clone https://github.com/ESP32Async/AsyncTCP.git AsyncTCP
+          git clone https://github.com/ESP32Async/ESPAsyncWebServer.git ESP_Async_WebServer
+          
+          # Install other libraries via arduino-cli (they will see the manually installed ones as already present)
           arduino-cli lib install "ElegantOTA"
           arduino-cli lib install "ArduinoJson"
 
@@ -61,6 +58,7 @@ jobs:
       - name: Compile Sketch
         run: |
           # Use verbose output to catch exactly where headers are being pulled from
+          # ELEGANTOTA_USE_ASYNC_WEBSERVER=1 is mandatory for ElegantOTA + ESPAsyncWebServer
           arduino-cli compile --verbose --fqbn esp32:esp32:esp32s3:FlashSize=16M,PartitionScheme=custom,PSRAM=opi,CDCOnBoot=cdc,FlashMode=opi \
             --build-property "build.extra_flags=-DELEGANTOTA_USE_ASYNC_WEBSERVER=1" \
             src/KoClicker/KoClicker.ino
