@@ -41,8 +41,9 @@ jobs:
 
       - name: Compile Sketch
         run: |
-          # Use a standard 16MB partition scheme as base, but point to our custom CSV
-          arduino-cli compile --fqbn esp32:esp32:esp32s3:FlashSize=16M,PartitionScheme=app3M_fat9M_16MB,PSRAM=opi,USBMode=hwcdc \
+          # Core 3.0.0 uses 'sixteenmb' as the internal key for the 16MB partition scheme
+          # We also explicitly point to the local partitions.csv using absolute path or relative to the sketch
+          arduino-cli compile --fqbn esp32:esp32:esp32s3:FlashSize=16M,PartitionScheme=sixteenmb,PSRAM=opi,CDCOnBoot=enabled \
             --build-property "build.partitions=partitions" \
             --build-property "build.custom_partitions=partitions" \
             src/KoClicker/KoClicker.ino
