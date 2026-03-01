@@ -27,6 +27,10 @@ jobs:
           arduino-cli core update-index --additional-urls https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
           arduino-cli core install esp32:esp32 --additional-urls https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
 
+      - name: Board Details Debug
+        run: |
+          arduino-cli board details -b esp32:esp32:esp32s3
+
       - name: Install Libraries
         run: |
           arduino-cli lib install "ElegantOTA"
@@ -37,4 +41,8 @@ jobs:
 
       - name: Compile Sketch
         run: |
-          arduino-cli compile --fqbn esp32:esp32:esp32s3:FlashSize=16M,PSRAM=opi,USBMode=hwcdc,PartitionScheme=custom,FlashMode=qio src/KoClicker/KoClicker.ino
+          # Use a standard 16MB partition scheme as base, but point to our custom CSV
+          arduino-cli compile --fqbn esp32:esp32:esp32s3:FlashSize=16M,PartitionScheme=app3M_fat9M_16MB,PSRAM=opi,USBMode=hwcdc \
+            --build-property "build.partitions=partitions" \
+            --build-property "build.custom_partitions=partitions" \
+            src/KoClicker/KoClicker.ino
