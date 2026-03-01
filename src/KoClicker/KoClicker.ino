@@ -909,7 +909,7 @@ void loop() {
   if (sleep_Timer > sleepCutoff || (mode == "AccessPoint" ? WiFi.softAPgetStationNum() == 0 : WiFi.status() != WL_CONNECTED)) sleep();
 
   ArduinoOTA.handle();
-  ElegantOTA.loop();
+  // ElegantOTA.loop() is not needed when using ESPAsyncWebServer with ELEGANTOTA_USE_ASYNC_WEBSERVER=1
   
 
   if (digitalRead(BUTTON) == LOW) {

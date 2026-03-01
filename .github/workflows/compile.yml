@@ -50,5 +50,7 @@ jobs:
           # CDCOnBoot=cdc (Enabled)
           # FlashMode=opi (Octal SPI, standard for N16R8 modules like T7-S3)
           # PSRAM=opi (Octal PSRAM)
+          # ELEGANTOTA_USE_ASYNC_WEBSERVER=1 is required for ElegantOTA to work with ESPAsyncWebServer
           arduino-cli compile --fqbn esp32:esp32:esp32s3:FlashSize=16M,PartitionScheme=custom,PSRAM=opi,CDCOnBoot=cdc,FlashMode=opi \
+            --build-property "build.extra_flags=-DELEGANTOTA_USE_ASYNC_WEBSERVER=1" \
             src/KoClicker/KoClicker.ino
