@@ -37,23 +37,30 @@ jobs:
 
       - name: Install Libraries
         run: |
-          mkdir -p /home/runner/Arduino/libraries
-          cd /home/runner/Arduino/libraries
+          # Enable unsafe install for git URLs
+          arduino-cli config init
+          arduino-cli config set library.enable_unsafe_install true
+
+          # Install Mathieu Carbou's forks for ESP32 Core 3.x / ESP-IDF 5 compatibility
+          arduino-cli lib install --git-url https://github.com/ESP32Async/AsyncTCP.git
+          arduino-cli lib install --git-url https://github.com/ESP32Async/ESPAsyncWebServer.git
           
-          # Remove any potential existing libraries
-          rm -rf AsyncTCP ESP_Async_WebServer ESPAsyncWebServer ElegantOTA ArduinoJson
-          
-          # Manually clone the compatible forks to ensure they are used
-          git clone https://github.com/ESP32Async/AsyncTCP.git AsyncTCP
-          git clone https://github.com/ESP32Async/ESPAsyncWebServer.git ESP_Async_WebServer
-          
-          # Install other libraries via arduino-cli (they will see the manually installed ones as already present)
+          # Install other libraries
           arduino-cli lib install "ElegantOTA"
           arduino-cli lib install "ArduinoJson"
 
-      - name: List Libraries Debug
+      - name: Patch ESPAsyncWebServer for Core 3.x
         run: |
-          ls -R /home/runner/Arduino/libraries
+          # The md5.h header was removed in ESP-IDF 5 / Core 3.x
+          # We need to change it to mbedtls/md5.h in the library source
+          LIB_PATH="/home/runner/Arduino/libraries/ESP_Async_WebServer/src/WebAuthentication.cpp"
+          if [ -f "$LIB_PATH" ]; then
+            sed -i 's/#include "md5.h"/#include <mbedtls\/md5.h>/g' "$LIB_PATH"
+            # Also update the function calls which changed in newer mbedtls
+            sed -i 's/mbedtls_md5_starts_ret/mbedtls_md5_starts/g' "$LIB_PATH"
+            sed -i 's/mbedtls_md5_update_ret/mbedtls_md5_update/g' "$LIB_PATH"
+            sed -i 's/mbedtls_md5_finish_ret/mbedtls_md5_finish/g' "$LIB_PATH"
+          fi
 
       - name: Compile Sketch
         run: |
