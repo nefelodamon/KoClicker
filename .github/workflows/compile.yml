@@ -17,6 +17,11 @@ jobs:
       - name: Setup Arduino CLI
         uses: arduino/setup-arduino-cli@v1
 
+      - name: Initialize Arduino CLI Config
+        run: |
+          arduino-cli config init
+          arduino-cli config set library.enable_unsafe_install true
+
       - name: Install ESP32 Platform
         run: |
           arduino-cli core update-index --additional-urls https://raw.githubusercontent.com/espressif/arduino-esp32/gh-pages/package_esp32_index.json
@@ -24,11 +29,12 @@ jobs:
 
       - name: Install Libraries
         run: |
-          arduino-cli lib install "AsyncTCP"
-          arduino-cli lib install "ESP Async WebServer"
           arduino-cli lib install "ElegantOTA"
           arduino-cli lib install "ArduinoJson"
+          # These are not in the official library manager or names vary; GitHub URLs are more reliable
+          arduino-cli lib install --git-url https://github.com/me-no-dev/AsyncTCP.git
+          arduino-cli lib install --git-url https://github.com/me-no-dev/ESPAsyncWebServer.git
 
       - name: Compile Sketch
         run: |
-          arduino-cli compile --fqbn esp32:esp32:esp32s3:FlashSize=16M,PSRAM=opi,USBMode=hwcdc,PartitionScheme=default_16MB,FlashMode=qio src/KoClicker/KoClicker.ino
+          arduino-cli compile --fqbn esp32:esp32:esp32s3:FlashSize=16M,PSRAM=opi,USBMode=hwcdc,PartitionScheme=custom,FlashMode=qio src/KoClicker/KoClicker.ino
