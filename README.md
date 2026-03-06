@@ -32,7 +32,9 @@ Three connectivity modes can be cycled through via a super-long button press. Th
 
 ## Hardware
 
-| Component | GPIO (ESP32-C3) | Notes |
+### ESP32-C3
+
+| Component | GPIO | Notes |
 |---|---|---|
 | Button | 9 | BOOT button; `INPUT_PULLUP`; `LOW` = pressed |
 | Red LED | 3 | Active-low |
@@ -42,11 +44,20 @@ Three connectivity modes can be cycled through via a super-long button press. Th
 | OLED SDA | 5 | SSD1306 72x40, I2C |
 | Wake pin | 2 | GPIO used to wake from deep sleep (must be GPIO 0–5) |
 
-ESP32-S3 is also supported with different pin assignments defined in the sketch.
+### ESP32-S3
+
+| Component | GPIO | Notes |
+|---|---|---|
+| Button | 48 | `INPUT_PULLUP`; `LOW` = pressed |
+| Red LED | 47 | Active-low |
+| Green LED | 46 | Active-low |
+| Blue LED | 45 | Active-low |
+
+> **Note:** The ESP32-S3 variant does not include OLED display support or a defined deep-sleep wake pin. The startup sequence uses a simple LED animation instead of the OLED boot animation.
 
 ---
 
-## OLED Display (ESP32-C3)
+## OLED Display (ESP32-C3 only)
 
 The ESP32-C3 variant supports a 72x40 SSD1306 OLED display. It shows:
 
@@ -123,9 +134,9 @@ KoClicker enters deep sleep (`esp_deep_sleep_start()`) when:
 - The device has been idle (no button press) longer than `sleepCutoff`, **or**
 - The Wi-Fi connection is lost (Kindle disconnected in AP mode, or Wi-Fi dropped in other modes)
 
-Sleep is disabled when `sleepCutoff` is set to `0`. A countdown timer is shown on the OLED during the final 2 minutes before sleep.
+Sleep is disabled when `sleepCutoff` is set to `0`. A countdown timer is shown on the OLED during the final 2 minutes before sleep (ESP32-C3 only).
 
-The device wakes from sleep on a button press (via GPIO wake — `WAKE_PIN`, default GPIO 2 on ESP32-C3).
+The device wakes from sleep on a button press via GPIO wake. On the ESP32-C3, `WAKE_PIN` defaults to GPIO 2 (must be in the RTC domain, GPIO 0–5). The ESP32-S3 variant does not define a wake pin by default — add one in the sketch to enable wake-from-sleep.
 
 ---
 
@@ -139,14 +150,24 @@ The device wakes from sleep on a button press (via GPIO wake — `WAKE_PIN`, def
 - `U8g2` (for OLED support on ESP32-C3)
 
 **Arduino IDE 2.x:**
-- Board: `ESP32C3 Dev Module`
-- Tools → Optimize → **MinSizeRel (-Os)**
+
+| Target | Board selection | Notes |
+|---|---|---|
+| ESP32-C3 | `ESP32C3 Dev Module` | OLED and deep-sleep wake supported |
+| ESP32-S3 | `ESP32S3 Dev Module` | No OLED; adjust `PSRAM` and flash settings as needed |
+
+- Tools → Optimize → **MinSizeRel (-Os)** (recommended for both)
 - Compile: `Ctrl+R` | Upload: `Ctrl+U`
 
 **Arduino CLI:**
 ```bash
+# ESP32-C3
 arduino-cli compile --fqbn esp32:esp32:esp32c3 .
 arduino-cli upload  --fqbn esp32:esp32:esp32c3 --port <COMx> .
+
+# ESP32-S3
+arduino-cli compile --fqbn esp32:esp32:esp32s3 .
+arduino-cli upload  --fqbn esp32:esp32:esp32s3 --port <COMx> .
 ```
 
 **OTA (after first USB flash):**
