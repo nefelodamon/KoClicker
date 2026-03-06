@@ -170,9 +170,23 @@ arduino-cli compile --fqbn esp32:esp32:esp32s3 .
 arduino-cli upload  --fqbn esp32:esp32:esp32s3 --port <COMx> .
 ```
 
-**OTA (after first USB flash):**
-- Arduino IDE: OTA hostname `KoClicker`, password set via settings (default `1234`)
-- Browser: `http://<device-ip>/update`
+**Flashing — First Time (USB required)**
+
+The first flash must be done over USB, as the OTA functionality is not available on a blank device:
+
+1. Connect the ESP32 to your PC via USB.
+2. Select the correct board and port in Arduino IDE (or specify `--port` in the CLI).
+3. Compile and upload (`Ctrl+U` / `arduino-cli upload`).
+4. Open the Serial Monitor at 115200 baud to confirm the device boots and connects.
+
+**Subsequent Updates (OTA)**
+
+After the first USB flash, future firmware updates can be done wirelessly in two ways:
+
+- **Browser:** Navigate to `http://<device-ip>/update`, select a compiled `.bin` file, and upload. The device restarts automatically on success.
+- **Arduino IDE:** Select the `KoClicker` device from Tools → Port (it will appear as a network port). Upload as normal — you will be prompted for the OTA password (default `1234`, configurable in settings).
+
+> OTA updates require the device to be powered on and connected to Wi-Fi.
 
 ---
 
