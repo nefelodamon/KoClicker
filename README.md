@@ -140,51 +140,36 @@ The device wakes from sleep on a button press via GPIO wake. On the ESP32-C3, `W
 
 ---
 
-## Build & Flash
+## Flashing
 
-**Requirements (install via Arduino Library Manager):**
-- `AsyncTCP`
-- `ESPAsyncWebServer`
-- `ElegantOTA`
-- `ArduinoJson`
-- `U8g2` (for OLED support on ESP32-C3)
+### First Flash (USB required)
 
-**Arduino IDE 2.x:**
+The first flash must be done over USB — OTA is not available on a blank device.
 
-| Target | Board selection | Notes |
-|---|---|---|
-| ESP32-C3 | `ESP32C3 Dev Module` | OLED and deep-sleep wake supported |
-| ESP32-S3 | `ESP32S3 Dev Module` | No OLED; adjust `PSRAM` and flash settings as needed |
+Download the latest pre-built binary for your board from the [Releases](https://github.com/nefelodamon/KoClicker/releases) page, then flash it using one of the tools below.
 
-- Tools → Optimize → **MinSizeRel (-Os)** (recommended for both)
-- Compile: `Ctrl+R` | Upload: `Ctrl+U`
-
-**Arduino CLI:**
+**[esptool](https://github.com/espressif/esptool) (recommended, cross-platform):**
 ```bash
 # ESP32-C3
-arduino-cli compile --fqbn esp32:esp32:esp32c3 .
-arduino-cli upload  --fqbn esp32:esp32:esp32c3 --port <COMx> .
+esptool.py --chip esp32c3 --port <COMx> write_flash 0x0 KoClicker-esp32c3.bin
 
 # ESP32-S3
-arduino-cli compile --fqbn esp32:esp32:esp32s3 .
-arduino-cli upload  --fqbn esp32:esp32:esp32s3 --port <COMx> .
+esptool.py --chip esp32s3 --port <COMx> write_flash 0x0 KoClicker-esp32s3.bin
 ```
 
-**Flashing — First Time (USB required)**
+**[ESP32 Flash Download Tool](https://www.espressif.com/en/support/download/other-tools) (Windows GUI):**
+1. Select the chip type (`ESP32-C3` or `ESP32-S3`).
+2. Add the `.bin` file at address `0x0`.
+3. Select the correct COM port and click **Start**.
 
-The first flash must be done over USB, as the OTA functionality is not available on a blank device:
+After flashing, open a serial monitor at **115200 baud** to confirm the device boots correctly.
 
-1. Connect the ESP32 to your PC via USB.
-2. Select the correct board and port in Arduino IDE (or specify `--port` in the CLI).
-3. Compile and upload (`Ctrl+U` / `arduino-cli upload`).
-4. Open the Serial Monitor at 115200 baud to confirm the device boots and connects.
+### Subsequent Updates (OTA)
 
-**Subsequent Updates (OTA)**
+Once the device is running and connected to Wi-Fi, future firmware updates can be done wirelessly:
 
-After the first USB flash, future firmware updates can be done wirelessly in two ways:
-
-- **Browser:** Navigate to `http://<device-ip>/update`, select a compiled `.bin` file, and upload. The device restarts automatically on success.
-- **Arduino IDE:** Select the `KoClicker` device from Tools → Port (it will appear as a network port). Upload as normal — you will be prompted for the OTA password (default `1234`, configurable in settings).
+- **Browser:** Navigate to `http://<device-ip>/update`, select the new `.bin` file, and upload. The device restarts automatically on success.
+- **Arduino IDE:** The device appears as a network port (`KoClicker`). Upload as normal — you will be prompted for the OTA password (default `1234`, configurable in settings).
 
 > OTA updates require the device to be powered on and connected to Wi-Fi.
 
