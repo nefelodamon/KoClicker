@@ -177,7 +177,7 @@ Once the device is running and connected to Wi-Fi, future firmware updates can b
 - **Browser:** Navigate to `http://<device-ip>/update`, select the new `.bin` file, and upload. The device restarts automatically on success.
 - **Arduino IDE:** The device appears as a network port (`KoClicker`). Upload as normal — you will be prompted for the OTA password (default `1234`, configurable in settings).
 
-> OTA updates require the device to be powered on and connected to Wi-Fi.
+> OTA updates require the device to be powered on and connected to Home mode.
 
 ---
 
