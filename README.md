@@ -148,7 +148,13 @@ The first flash must be done over USB — OTA is not available on a blank device
 
 Download the latest pre-built binary for your board from the [Releases](https://github.com/nefelodamon/KoClicker/releases) page, then flash it using one of the tools below.
 
-**[esptool](https://github.com/espressif/esptool) (recommended, cross-platform):**
+**[ESP Web Flasher](https://espressif.github.io/esptool-js/) (browser, no install required):**
+1. Open the link in Chrome or Edge (requires WebSerial support).
+2. Connect the ESP32 via USB, click **Connect**, and select the port.
+3. Set the flash address to `0x0` and select the downloaded `.bin` file.
+4. Click **Program**.
+
+**[esptool](https://github.com/espressif/esptool) (cross-platform CLI):**
 ```bash
 # ESP32-C3
 esptool.py --chip esp32c3 --port <COMx> write_flash 0x0 KoClicker-esp32c3.bin
