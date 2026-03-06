@@ -13,6 +13,7 @@
   #define BUTTON 9
   #define WAKE_PIN 2  // Must be GPIO 0-5 (RTC domain) to wake from deep sleep. Change to match your wired button.
   #define RED_LED 3
+
   #define GREEN_LED 4
   #define BLUE_LED 5
 #elif defined(CONFIG_IDF_TARGET_ESP32S3)
