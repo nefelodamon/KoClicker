@@ -66,7 +66,7 @@ const char* DEF_OTA_PASS = "1234";
 const int KOREADER_PORT = 8080;
 
 // Runtime variables
-String KoClickerVersion = "v0.2.3";
+String KoClickerVersion = "v1.0.0";
 uint32_t shortClick;
 uint32_t longClick;
 uint32_t sleepCutoff;
