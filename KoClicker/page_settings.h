@@ -17,7 +17,9 @@ String buildSettingsHtml() {
             "</style>");
 
   html += F("<h1>Device Settings</h1>");
-  html += F("<div class='card'><div><strong>Kindle IP Address:</strong> <span class='path'>");
+  html += F("<div class='card'><div><strong>Current mode: </strong> <span class='path'>");
+  html += mode;
+  html += F("</span></div><div><strong>Kindle IP Address:</strong> <span class='path'>");
   html += KoClickerIpAddress;
   html += F("</span></div></div>");
 

@@ -34,7 +34,9 @@ String buildIndexHtml() {
   // Add placeholder text under H1
   html += F("<p>KoClicker index page</p>");
 
-  html += F("<div class='card'><div><strong>Kindle IP Address: </strong> <span class='path'>");
+  html += F("<div class='card'><div><strong>Current mode: </strong> <span class='path'>");
+  html += mode;
+  html += F("</span></div><div><strong>Kindle IP Address: </strong> <span class='path'>");
   html += kindleIpAddress;
   html += F("</span></div></div>");
 

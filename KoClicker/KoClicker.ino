@@ -10,11 +10,11 @@
 
 // Hardware pin assignments — selected automatically by target board
 #if defined(CONFIG_IDF_TARGET_ESP32C3)
-  #define BUTTON 9
+  #define BUTTON 2
   #define WAKE_PIN 2  // Must be GPIO 0-5 (RTC domain) to wake from deep sleep. Change to match your wired button.
   #define RED_LED 3
   #define GREEN_LED 4
-  #define BLUE_LED 5
+  #define BLUE_LED 7
 #elif defined(CONFIG_IDF_TARGET_ESP32S3)
   #define BUTTON 48
   #define RED_LED 47
@@ -66,7 +66,7 @@ const char* DEF_OTA_PASS = "1234";
 const int KOREADER_PORT = 8080;
 
 // Runtime variables
-String KoClickerVersion = "v1.0.0";
+String KoClickerVersion = "v1.0.3";
 uint32_t shortClick;
 uint32_t longClick;
 uint32_t sleepCutoff;
@@ -232,10 +232,12 @@ void sleep() {
   digitalWrite(GREEN_LED, ON);
   digitalWrite(BLUE_LED, ON);
 
-#ifdef WAKE_PIN
-  esp_deep_sleep_enable_gpio_wakeup(1ULL << WAKE_PIN, ESP_GPIO_WAKEUP_GPIO_LOW);
-#endif
-  esp_deep_sleep_start();
+  drawOledLine("", 0);
+
+  #ifdef WAKE_PIN
+    esp_deep_sleep_enable_gpio_wakeup(1ULL << WAKE_PIN, ESP_GPIO_WAKEUP_GPIO_LOW);
+  #endif
+    esp_deep_sleep_start();
 }
 
 void switchMode() {
@@ -783,6 +785,10 @@ void loop() {
         drawOledLine("Sleeping in", 2);
         drawOledLine(buf, 3);
       }
+    }
+    if (remaining <= 60000) {
+      int modeLed = (mode == "AccessPoint") ? RED_LED : (mode == "HotSpot") ? GREEN_LED : BLUE_LED;
+      digitalWrite(modeLed, ((millis() / 500) % 2 == 0) ? ON : OFF);
     }
   }
 
