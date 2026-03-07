@@ -189,7 +189,9 @@ void drawOledLine(const char* text, int line) {
   u8g2.setDrawColor(1);
   const char* modeLabel = mode == "Home" ? "HM" : mode == "AccessPoint" ? "AP" : "HS";
   u8g2.drawStr(OLED_X(0), OLED_Y(0), modeLabel);
-  u8g2.drawStr(DISP_W - u8g2.getStrWidth(oledStatus.c_str()), OLED_Y(0), oledStatus.c_str());
+  char cntBuf[8];
+  snprintf(cntBuf, sizeof(cntBuf), "%d", pageCounter);
+  u8g2.drawStr(DISP_W - u8g2.getStrWidth(cntBuf), OLED_Y(0), cntBuf);
 
   // line == 0: clear entire screen
   if (line == 0) {

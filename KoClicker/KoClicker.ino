@@ -66,7 +66,7 @@ const char* DEF_OTA_PASS = "1234";
 const int KOREADER_PORT = 8080;
 
 // Runtime variables
-String KoClickerVersion = "v1.0.3";
+String KoClickerVersion = "v1.0.4";
 uint32_t shortClick;
 uint32_t longClick;
 uint32_t sleepCutoff;
@@ -88,7 +88,8 @@ unsigned long sleep_time_reset;
 String macFilter;
 String lastConnectedMac;
 bool stationAllowed = false;
-String oledStatus = "";
+int pageCounter = 0;
+bool pendingRestart = false;
 //---------------------------------------------------------------------------//
 
 #include "c3_oled.h"
@@ -161,8 +162,7 @@ void handlePostSettings(AsyncWebServerRequest* request, uint8_t* data, size_t le
 void handleReset(AsyncWebServerRequest* request) {
   prefs.clear();
   request->send(200, "application/json", "{\"ok\":true,\"message\":\"Preferences cleared. Restarting...\"}");
-  delay(500);
-  ESP.restart();
+  pendingRestart = true;
 }
 
 void blinkLed(int pin, int times, int onMs, int offMs) {
@@ -242,7 +242,6 @@ void sleep() {
 
 void switchMode() {
   String newMode;
-  oledStatus = "OK";
   drawOledLine("Chg mode to", 2);
 
   if (mode == "HotSpot") {
@@ -280,6 +279,7 @@ void pageTurn(int direction, int waitTime) {
   }
   bool success = webCall(url, waitTime);
   if (success) {
+    pageCounter += direction;
     delay(delayBetweenCalls);
     webCall("broadcast/InputEvent", waitTime);
     drawOledLine("OK", 3);
@@ -288,7 +288,7 @@ void pageTurn(int direction, int waitTime) {
   }
 }
 
-bool webCall(String endpoint, int waitTime) {
+bool webCall(const String& endpoint, int waitTime) {
   bool success = false;
   WiFiClient client;
   HTTPClient http;
@@ -662,7 +662,6 @@ void setup() {
   ArduinoOTA.setPassword(otaPassword.c_str());
   ArduinoOTA.begin();
 
-  oledStatus = "NOK";
   drawOledLine("Connecting", 2);
 
   // Now wait for a client/WiFi connection
@@ -688,7 +687,6 @@ void setup() {
     }
   }
 
-  oledStatus = "OK";
   drawOledLine("Connected", 2);
   drawOledLine("", 3);
 
@@ -700,7 +698,6 @@ void setup() {
   logLinenl("Wi-Fi Connection established!");
   logLinenl("KoClicker IP address: %s", KoClickerIpAddress.c_str());
 
-  oledStatus = "OK";
   drawOledLine("Connected", 2);
   drawOledLine(KoClickerIpAddress.c_str(), 3);
 
@@ -713,7 +710,6 @@ void setup() {
       IPAddress broadCast = WiFi.localIP();
       connected = false;
       logLinenl("Starting scan!");
-        oledStatus = "SCAN";
         drawOledLine("Scanning", 2);
       for (int i = 255; i > 0; i--) {
         if (digitalRead(BUTTON) == LOW) {
@@ -732,7 +728,6 @@ void setup() {
       }
     } else {
       logLinenl("Connected with last Kindle HotSpot IP: %s", kindleIpAddress.c_str());
-      oledStatus = "OK";
       drawOledLine("Connected", 2);
       drawOledLine(kindleIpAddress.c_str(), 3);
     }
@@ -744,7 +739,6 @@ void setup() {
 
   if (connected) {
     logLinenl("Kindle found and connected.... Waiting for input");
-    oledStatus = "OK";
     drawOledLine("Kindle", 2);
     drawOledLine("Found", 3);
     webCall("event/ToggleNightMode", 100);
@@ -752,13 +746,14 @@ void setup() {
     webCall("event/ToggleNightMode", 100);
   } else {
     logLinenl("Cant find Kindle after scan... Please change mode");
-    oledStatus = "NOK";
     drawOledLine("Kindle", 2);
     drawOledLine("Not found", 3);
   }
 }
 
 void loop() {
+
+  if (pendingRestart) { delay(100); ESP.restart(); }
 
   digitalWrite(RED_LED, OFF);
   digitalWrite(GREEN_LED, OFF);
@@ -795,7 +790,7 @@ void loop() {
   ArduinoOTA.handle();
 
   if (digitalRead(BUTTON) == LOW) {
-    unsigned long duration;
+    unsigned long duration = 0;
     unsigned long startTime = millis();
 
     while (digitalRead(BUTTON) == LOW) {
