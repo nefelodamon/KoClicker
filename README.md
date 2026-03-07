@@ -36,13 +36,14 @@ Three connectivity modes can be cycled through via a super-long button press. Th
 
 | Component | GPIO | Notes |
 |---|---|---|
-| Button | 9 | BOOT button; `INPUT_PULLUP`; `LOW` = pressed |
+| Button / Wake pin | 2 | BOOT button; `INPUT_PULLUP`; `LOW` = pressed; also used as deep-sleep wake pin |
 | Red LED | 3 | Active-low |
 | Green LED | 4 | Active-low |
-| Blue LED | 5 | Active-low |
-| OLED SCL | 6 | SSD1306 72x40, I2C |
-| OLED SDA | 5 | SSD1306 72x40, I2C |
-| Wake pin | 2 | GPIO used to wake from deep sleep (must be GPIO 0–5) |
+| Blue LED | 7 | Active-low |
+| OLED SCL | 6 | SSD1306 72×40, I2C |
+| OLED SDA | 5 | SSD1306 72×40, I2C |
+
+> **Note:** GPIO 5 (OLED SDA) must not be shared with any LED or other output.
 
 ### ESP32-S3
 
@@ -59,11 +60,19 @@ Three connectivity modes can be cycled through via a super-long button press. Th
 
 ## OLED Display (ESP32-C3 only)
 
-The ESP32-C3 variant supports a 72x40 SSD1306 OLED display. It shows:
+The ESP32-C3 variant supports a 72×40 SSD1306 OLED display. It shows:
 
-- **Line 1:** Current Wi-Fi mode abbreviation (`AP` / `HS` / `HM`) and connection status (`OK` / `NOK` / `SCAN`)
-- **Line 2:** Current action or state (e.g. `Connecting`, `Page-->`, `Kindle`, `Scanning`)
-- **Line 3:** Detail text (e.g. IP address, `Found`, `Error`, sleep countdown)
+- **Line 1:** Three items always visible — mode label (`AP` / `HS` / `HM`) on the left, signal info centred, page counter on the right
+- **Line 2:** Current action or state (e.g. `Connecting`, `Page-->`, `Kindle`, `Scanning`, `Sleeping in`)
+- **Line 3:** Detail text (e.g. IP address, `Found`, `Error`, `MM:SS` sleep countdown)
+
+**Signal info (line 1 centre):**
+
+| Mode | Display | Example |
+|---|---|---|
+| AccessPoint | Number of connected stations | `1ST` |
+| HotSpot / Home (connected) | RSSI in dBm | `-67dB` |
+| HotSpot / Home (disconnected) | `--` | `--` |
 
 On boot, an animated splash screen plays: the "KoClicker" logo flips horizontally, the firmware version types out character by character, then the screen fills with random pixels and fades to black.
 
@@ -77,8 +86,8 @@ Once connected, KoClicker's IP address is shown on the OLED and in the serial lo
 
 | URL | Description |
 |---|---|
-| `http://<device-ip>/` | Status dashboard — shows mode, IP addresses, firmware version |
-| `http://<device-ip>/settings` | Settings form — configure all parameters |
+| `http://<device-ip>/` | Status dashboard — shows current mode, Kindle IP, firmware version |
+| `http://<device-ip>/settings` | Settings form — shows current mode, Kindle IP, and all configurable parameters |
 | `http://<device-ip>/console` | Live WebSocket log console with interactive commands |
 | `http://<device-ip>/update` | OTA firmware update via browser (ElegantOTA) |
 
@@ -127,6 +136,12 @@ All settings are stored in NVS and configurable via `/settings` or the JSON API 
 
 ---
 
+## Page Counter
+
+KoClicker keeps a running count of page turns since the last boot. It increments by 1 on a successful next-page call and decrements by 1 on a successful previous-page call. The counter is displayed on the right side of OLED line 1 and resets to 0 on every reboot or wake from sleep.
+
+---
+
 ## Sleep Behaviour
 
 KoClicker enters deep sleep (`esp_deep_sleep_start()`) when:
@@ -134,9 +149,11 @@ KoClicker enters deep sleep (`esp_deep_sleep_start()`) when:
 - The device has been idle (no button press) longer than `sleepCutoff`, **or**
 - The Wi-Fi connection is lost (Kindle disconnected in AP mode, or Wi-Fi dropped in other modes)
 
-Sleep is disabled when `sleepCutoff` is set to `0`. A countdown timer is shown on the OLED during the final 2 minutes before sleep (ESP32-C3 only).
+Sleep is disabled when `sleepCutoff` is set to `0`.
 
-The device wakes from sleep on a button press via GPIO wake. On the ESP32-C3, `WAKE_PIN` defaults to GPIO 2 (must be in the RTC domain, GPIO 0–5). The ESP32-S3 variant does not define a wake pin by default — add one in the sketch to enable wake-from-sleep.
+**Countdown (ESP32-C3 only):** During the final 2 minutes before sleep, the OLED shows `Sleeping in / MM:SS`. During the final 60 seconds the mode LED (red / green / blue) blinks at 500 ms on/off as an additional warning.
+
+The device wakes from sleep on a button press. On the ESP32-C3, the button (GPIO 2) doubles as the wake pin — both share the same GPIO. On wake, the device performs a full reboot and `setup()` runs from the start. The ESP32-S3 variant does not define a wake pin by default.
 
 ---
 
