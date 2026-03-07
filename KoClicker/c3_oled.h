@@ -183,7 +183,7 @@ void drawOledLine(const char* text, int line) {
   int asc   = u8g2.getAscent();
   int lineH = asc - u8g2.getDescent();
 
-  // Always refresh line 1 (mode + status)
+  // Always refresh line 1 (mode + signal + page counter)
   u8g2.setDrawColor(0);
   u8g2.drawBox(0, OLED_Y(0) - asc, DISP_W, lineH);
   u8g2.setDrawColor(1);
@@ -192,6 +192,15 @@ void drawOledLine(const char* text, int line) {
   char cntBuf[8];
   snprintf(cntBuf, sizeof(cntBuf), "%d", pageCounter);
   u8g2.drawStr(DISP_W - u8g2.getStrWidth(cntBuf), OLED_Y(0), cntBuf);
+  char sigBuf[8];
+  if (mode == "AccessPoint") {
+    snprintf(sigBuf, sizeof(sigBuf), "%dST", WiFi.softAPgetStationNum());
+  } else if (WiFi.status() != WL_CONNECTED) {
+    snprintf(sigBuf, sizeof(sigBuf), "--");
+  } else {
+    snprintf(sigBuf, sizeof(sigBuf), "%ddB", WiFi.RSSI());
+  }
+  u8g2.drawStr((DISP_W - u8g2.getStrWidth(sigBuf)) / 2, OLED_Y(0), sigBuf);
 
   // line == 0: clear entire screen
   if (line == 0) {
