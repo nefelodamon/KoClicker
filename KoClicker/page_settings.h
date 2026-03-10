@@ -30,6 +30,7 @@ String buildSettingsHtml() {
   html += F("<div style='margin-top:10px'><label for='httpCallTimeout'>HTTP call timeout (ms)</label><input id='httpCallTimeout' type='number' min='1' step='1'></div>");
   html += F("<div style='margin-top:10px'><label for='httpConnectTimeout'>HTTP connect timeout (ms)</label><input id='httpConnectTimeout' type='number' min='1' step='1'></div>");
   html += F("<div style='margin-top:10px'><label for='delayBetweenCalls'>Delay between calls (ms)</label><input id='delayBetweenCalls' type='number' min='0' step='1'></div>");
+  html += F("<div style='margin-top:10px'><label for='doubleClickMs'>Double-click window (ms)</label><input id='doubleClickMs' type='number' min='0' step='1'></div>");
   html += F("<hr style='border-color:#222;margin:12px 0'>");
   html += F("<div style='margin-top:10px'><label for='kindlhmipaddr'>Kindle Home IP address</label><input id='kindlhmipaddr' type='text' placeholder='192.168.x.x'></div>");
   html += F("<div><label for='hs_ssid'>Hotspot SSID</label><input id='hs_ssid' type='text'></div>");
@@ -84,6 +85,11 @@ String buildSettingsHtml() {
   // delayBetweenCalls
   html += F("    el('delayBetweenCalls').value = j.delayBetweenCalls || ");
   html += DEF_DELAY_BETWEEN_CALLS;
+  html += F(";");
+
+  // doubleClickMs
+  html += F("    el('doubleClickMs').value = j.doubleClickMs || ");
+  html += DEF_DOUBLE_CLICK_MS;
   html += F(";");
 
   // hotspot SSID
@@ -152,6 +158,11 @@ String buildSettingsHtml() {
   // delayBetweenCalls
   html += F("    delayBetweenCalls: parseInt(el('delayBetweenCalls').value) || ");
   html += DEF_DELAY_BETWEEN_CALLS;
+  html += F(",");
+
+  // doubleClickMs
+  html += F("    doubleClickMs: parseInt(el('doubleClickMs').value) || ");
+  html += DEF_DOUBLE_CLICK_MS;
   html += F(",");
 
   // SSIDs and passwords

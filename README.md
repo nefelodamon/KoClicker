@@ -8,9 +8,10 @@ KoClicker is a wireless, single-button page-turner for [KOReader](https://koread
 
 KoClicker hosts a small web server and sends HTTP GET requests to KOReader's HTTP API on port 8080. A single physical button controls page navigation:
 
-| Press duration | Action |
+| Press | Action |
 |---|---|
 | Short press (`< 500 ms`) | Next page |
+| Double-click (two short presses within `300 ms`) | Show page counter on OLED line 2 |
 | Long press (`500 ms – 5 s`) | Previous page |
 | Super-long press (`> 5 s`) | Switch Wi-Fi mode (restarts) |
 
@@ -124,6 +125,7 @@ All settings are stored in NVS and configurable via `/settings` or the JSON API 
 | `httpCallTimeout` | 750 ms | HTTP response timeout for KOReader calls |
 | `httpConnectTimeout` | 750 ms | HTTP connection timeout |
 | `delayBetweenCalls` | 400 ms | Delay between the `GotoViewRel` and `InputEvent` HTTP calls |
+| `doubleClickMs` | 300 ms | Time window after a short press to detect a second press as a double-click; set to `0` to disable |
 | `kindlhmipaddr` | — | Kindle's static IP for Home mode |
 | `ap_ssid` | `KoClicker` | SSID for AccessPoint mode |
 | `ap_password` | `12345678` | Password for AccessPoint mode |
@@ -139,6 +141,8 @@ All settings are stored in NVS and configurable via `/settings` or the JSON API 
 ## Page Counter
 
 KoClicker keeps a running count of page turns since the last boot. It increments by 1 on a successful next-page call and decrements by 1 on a successful previous-page call. The counter is displayed on the right side of OLED line 1 and resets to 0 on every reboot or wake from sleep.
+
+A **double-click** (two short presses within the `doubleClickMs` window, default 300 ms) displays the current page counter as `Pages: N` on OLED line 2, without turning a page.
 
 ---
 

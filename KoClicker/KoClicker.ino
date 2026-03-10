@@ -52,6 +52,7 @@ const char* K_OTA_PASS = "ota_pass";
 const char* K_MODE = "mode";
 const char* K_LAST_GOOD_IP = "last_Good_Ip";
 const char* K_MAC_FILTER = "mac_filter";
+const char* K_DOUBLE_CLICK_MS = "dblClickMs";
 
 // Defaults
 const uint32_t DEF_SHORT_CLICK = 500;
@@ -64,6 +65,7 @@ const char* DEF_AP_SSID = "KoClicker";
 const char* DEF_AP_PASS = "12345678";
 const char* DEF_OTA_PASS = "1234";
 const int KOREADER_PORT = 8080;
+const uint32_t DEF_DOUBLE_CLICK_MS = 300;
 
 // Runtime variables
 String KoClickerVersion = "v1.0.5";
@@ -89,6 +91,7 @@ String macFilter;
 String lastConnectedMac;
 bool stationAllowed = false;
 int pageCounter = 0;
+uint32_t doubleClickMs;
 bool pendingRestart = false;
 //---------------------------------------------------------------------------//
 
@@ -116,6 +119,7 @@ void handleGetSettings(AsyncWebServerRequest* request) {
   doc["ap_password"] = prefs.getString(K_AP_PASS, DEF_AP_PASS);
   doc["ota_password"] = prefs.getString(K_OTA_PASS, DEF_OTA_PASS);
   doc["mac_filter"] = prefs.getString(K_MAC_FILTER, "");
+  doc["doubleClickMs"] = prefs.getUInt(K_DOUBLE_CLICK_MS, DEF_DOUBLE_CLICK_MS);
 
   String out;
   serializeJson(doc, out);
@@ -151,6 +155,7 @@ void handlePostSettings(AsyncWebServerRequest* request, uint8_t* data, size_t le
   if (doc.containsKey("ap_password")) prefs.putString(K_AP_PASS, doc["ap_password"].as<String>());
   if (doc.containsKey("ota_password")) prefs.putString(K_OTA_PASS, doc["ota_password"].as<String>());
   if (doc.containsKey("mac_filter")) prefs.putString(K_MAC_FILTER, doc["mac_filter"].as<String>());
+  if (doc.containsKey("doubleClickMs")) prefs.putUInt(K_DOUBLE_CLICK_MS, doc["doubleClickMs"]);
 
   // Reload runtime variables
   loadPreferences();
@@ -550,6 +555,9 @@ void loadPreferences() {
 
   macFilter = prefs.getString(K_MAC_FILTER, "");
   logLinenl("Load Preference macFilter: %s", macFilter.c_str());
+
+  doubleClickMs = prefs.getUInt(K_DOUBLE_CLICK_MS, DEF_DOUBLE_CLICK_MS);
+  logLinenl("Load Preference doubleClickMs: %u", doubleClickMs);
 }
 
 void setup() {
@@ -820,8 +828,28 @@ void loop() {
     digitalWrite(BLUE_LED, OFF);
 
     if (duration < shortClick) {
-      // Next page on click
-      pageTurn(1, 150);
+      // Wait for possible double click
+      bool doubleClick = false;
+      unsigned long releaseTime = millis();
+      while (millis() - releaseTime < doubleClickMs) {
+        sleep_time_reset = millis();
+        if (digitalRead(BUTTON) == LOW) {
+          doubleClick = true;
+          while (digitalRead(BUTTON) == LOW) delay(10);
+          break;
+        }
+        delay(10);
+      }
+      if (doubleClick) {
+        char buf[16];
+        snprintf(buf, sizeof(buf), "Pages: %d", pageCounter);
+        logLinenl("Double click - %s", buf);
+        drawOledLine(buf, 2);
+        drawOledLine(" ", 3);
+      } else {
+        // Next page on click
+        pageTurn(1, 150);
+      }
     } else if (duration < longClick) {
       // Previous page on long click
       pageTurn(-1, 150);
