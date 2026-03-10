@@ -68,7 +68,7 @@ const int KOREADER_PORT = 8080;
 const uint32_t DEF_DOUBLE_CLICK_MS = 300;
 
 // Runtime variables
-String KoClickerVersion = "v1.0.7";
+String KoClickerVersion = "v1.0.8";
 uint32_t shortClick;
 uint32_t longClick;
 uint32_t sleepCutoff;
