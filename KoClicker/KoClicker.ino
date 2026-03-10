@@ -841,18 +841,19 @@ void loop() {
         delay(10);
       }
       if (doubleClick) {
-        char buf[16];
-        snprintf(buf, sizeof(buf), "Pages: %d", pageCounter);
-        logLinenl("Double click - %s", buf);
-        drawOledLine(buf, 2);
-        drawOledLine(" ", 3);
+        // Previous page on double click
+        pageTurn(-1, 150);
       } else {
-        // Next page on click
+        // Next page on single click
         pageTurn(1, 150);
       }
     } else if (duration < longClick) {
-      // Previous page on long click
-      pageTurn(-1, 150);
+      // Show page counter on long click
+      char buf[16];
+      snprintf(buf, sizeof(buf), "Pages: %d", pageCounter);
+      logLinenl("Long click - %s", buf);
+      drawOledLine(buf, 2);
+      drawOledLine(" ", 3);
     } else {
       // Switch mode in super long click
       logLinenl("Super long click detected");
