@@ -25,22 +25,22 @@ String buildSettingsHtml() {
 
   html += F("<div class='card'>");
   html += F("<div><label for='shortClick'>Short click (ms)</label><input id='shortClick' type='number' min='1' step='1'></div>");
+  html += F("<div style='margin-top:10px'><label for='doubleClickMs'>Double-click window (ms)</label><input id='doubleClickMs' type='number' min='0' step='1'></div>");
   html += F("<div style='margin-top:10px'><label for='longClick'>Long click (ms)</label><input id='longClick' type='number' min='1' step='1'></div>");
   html += F("<div style='margin-top:10px'><label for='sleepCutoff'>Sleep time cutoff (ms). Set to 0 to disable sleep. Minimum 2 minutes (120000)</label><input id='sleepCutoff' type='number' min='0' step='1'></div>");
   html += F("<div style='margin-top:10px'><label for='httpCallTimeout'>HTTP call timeout (ms)</label><input id='httpCallTimeout' type='number' min='1' step='1'></div>");
   html += F("<div style='margin-top:10px'><label for='httpConnectTimeout'>HTTP connect timeout (ms)</label><input id='httpConnectTimeout' type='number' min='1' step='1'></div>");
   html += F("<div style='margin-top:10px'><label for='delayBetweenCalls'>Delay between calls (ms)</label><input id='delayBetweenCalls' type='number' min='0' step='1'></div>");
-  html += F("<div style='margin-top:10px'><label for='doubleClickMs'>Double-click window (ms)</label><input id='doubleClickMs' type='number' min='0' step='1'></div>");
   html += F("<hr style='border-color:#222;margin:12px 0'>");
   html += F("<div style='margin-top:10px'><label for='kindlhmipaddr'>Kindle Home IP address</label><input id='kindlhmipaddr' type='text' placeholder='192.168.x.x'></div>");
-  html += F("<div><label for='hs_ssid'>Hotspot SSID</label><input id='hs_ssid' type='text'></div>");
-  html += F("<div style='margin-top:10px'><label for='hs_password'>Hotspot password</label><input id='hs_password' type='password'></div>");
+  html += F("<div style='margin-top:10px'><label for='mac_filter'>MAC allow-list (comma-separated, leave empty to allow all)</label><input id='mac_filter' type='text' placeholder='AA:BB:CC:DD:EE:FF, 11:22:33:44:55:66'></div>");
   html += F("<div style='margin-top:10px'><label for='hm_ssid'>Home SSID</label><input id='hm_ssid' type='text'></div>");
   html += F("<div style='margin-top:10px'><label for='hm_password'>Home password</label><input id='hm_password' type='password'></div>");
+  html += F("<div style='margin-top:10px'><label for='hs_ssid'>Hotspot SSID</label><input id='hs_ssid' type='text' placeholder='Christos-HotSpot'></div>");
+  html += F("<div style='margin-top:10px'><label for='hs_password'>Hotspot password</label><input id='hs_password' type='password'></div>");
   html += F("<div style='margin-top:10px'><label for='ap_ssid'>AP SSID</label><input id='ap_ssid' type='text'></div>");
   html += F("<div style='margin-top:10px'><label for='ap_password'>AP password</label><input id='ap_password' type='password'></div>");
   html += F("<div style='margin-top:10px'><label for='ota_password'>OTA password</label><input id='ota_password' type='password'></div>");
-  html += F("<div style='margin-top:10px'><label for='mac_filter'>MAC allow-list (comma-separated, leave empty to allow all)</label><input id='mac_filter' type='text' placeholder='AA:BB:CC:DD:EE:FF, 11:22:33:44:55:66'></div>");
   html += F("<div class='row'>"
             "<button id='saveBtn' class='btn primary'>Save</button>"
             "<button id='resetBtn' class='btn ghost'>Reset to defaults</button>"
@@ -59,6 +59,11 @@ String buildSettingsHtml() {
   html += DEF_SHORT_CLICK;
   html += F(";");
 
+  // doubleClickMs
+  html += F("    el('doubleClickMs').value = j.doubleClickMs || ");
+  html += DEF_DOUBLE_CLICK_MS;
+  html += F(";");
+
   // longClick
   html += F("    el('longClick').value = j.longClick || ");
   html += DEF_LONG_CLICK;
@@ -68,9 +73,6 @@ String buildSettingsHtml() {
   html += F("    el('sleepCutoff').value = (j.sleepCutoff != null) ? j.sleepCutoff : ");
   html += DEF_SLEEP_CUTOFF;
   html += F(";");
-
-  // kindle home IP
-  html += F("    el('kindlhmipaddr').value = j.kindlhmipaddr || '';");
 
   // httpCallTimeout
   html += F("    el('httpCallTimeout').value = j.httpCallTimeout || ");
@@ -87,22 +89,23 @@ String buildSettingsHtml() {
   html += DEF_DELAY_BETWEEN_CALLS;
   html += F(";");
 
-  // doubleClickMs
-  html += F("    el('doubleClickMs').value = j.doubleClickMs || ");
-  html += DEF_DOUBLE_CLICK_MS;
-  html += F(";");
+  // kindle home IP
+  html += F("    el('kindlhmipaddr').value = j.kindlhmipaddr || '';");
 
-  // hotspot SSID
-  html += F("    el('hs_ssid').value = j.hs_ssid || '';");
-
-  // hotspot password
-  html += F("    el('hs_password').value = j.hs_password || '';");
+  // MAC filter
+  html += F("    el('mac_filter').value = j.mac_filter || '';");
 
   // home SSID
   html += F("    el('hm_ssid').value = j.hm_ssid || '';");
 
   // home password
   html += F("    el('hm_password').value = j.hm_password || '';");
+
+  // hotspot SSID
+  html += F("    el('hs_ssid').value = j.hs_ssid || '';");
+
+  // hotspot password
+  html += F("    el('hs_password').value = j.hs_password || '';");
 
   // AP SSID
   html += F("    el('ap_ssid').value = j.ap_ssid || \"");
@@ -119,9 +122,6 @@ String buildSettingsHtml() {
   html += DEF_OTA_PASS;
   html += F("\";");
 
-  // MAC filter
-  html += F("    el('mac_filter').value = j.mac_filter || '';");
-
   html += F("    el('status').textContent = 'Loaded.';"
             "  }catch(e){ el('status').textContent = 'Could not load settings.'; }}");
 
@@ -134,6 +134,11 @@ String buildSettingsHtml() {
   html += DEF_SHORT_CLICK;
   html += F(",");
 
+  // doubleClickMs
+  html += F("    doubleClickMs: parseInt(el('doubleClickMs').value) || ");
+  html += DEF_DOUBLE_CLICK_MS;
+  html += F(",");
+
   // longClick
   html += F("    longClick: parseInt(el('longClick').value) || ");
   html += DEF_LONG_CLICK;
@@ -141,9 +146,6 @@ String buildSettingsHtml() {
 
   // sleepCutoff
   html += F("    sleepCutoff: parseInt(el('sleepCutoff').value, 10),");
-
-  // kindle home IP
-  html += F("    kindlhmipaddr: el('kindlhmipaddr').value || '',");
 
   // httpCallTimeout
   html += F("    httpCallTimeout: parseInt(el('httpCallTimeout').value) || ");
@@ -160,17 +162,13 @@ String buildSettingsHtml() {
   html += DEF_DELAY_BETWEEN_CALLS;
   html += F(",");
 
-  // doubleClickMs
-  html += F("    doubleClickMs: parseInt(el('doubleClickMs').value) || ");
-  html += DEF_DOUBLE_CLICK_MS;
-  html += F(",");
-
-  // SSIDs and passwords
-  html += F("    hs_ssid: el('hs_ssid').value || '', hs_password: el('hs_password').value || '',"
+  // network / auth fields
+  html += F("    kindlhmipaddr: el('kindlhmipaddr').value || '',"
+            "    mac_filter: el('mac_filter').value || '',"
             "    hm_ssid: el('hm_ssid').value || '', hm_password: el('hm_password').value || '',"
+            "    hs_ssid: el('hs_ssid').value || '', hs_password: el('hs_password').value || '',"
             "    ap_ssid: el('ap_ssid').value || '', ap_password: el('ap_password').value || '',"
-            "    ota_password: el('ota_password').value || '',"
-            "    mac_filter: el('mac_filter').value || ''"
+            "    ota_password: el('ota_password').value || ''"
             "  };"
             "  el('status').textContent = 'Saving…';"
             "  try{const r = await fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});"
