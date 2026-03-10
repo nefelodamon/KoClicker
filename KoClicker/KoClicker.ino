@@ -848,12 +848,15 @@ void loop() {
         pageTurn(1, 150);
       }
     } else if (duration < longClick) {
-      // Show page counter on long click
+      // Show page counter and uptime on long click
       char buf[16];
       snprintf(buf, sizeof(buf), "Pages: %d", pageCounter);
-      logLinenl("Long click - %s", buf);
+      unsigned long s = millis() / 1000;
+      char uptime[16];
+      snprintf(uptime, sizeof(uptime), "%luh%02lum%02lus", s / 3600, (s % 3600) / 60, s % 60);
+      logLinenl("Long click - %s  uptime: %s", buf, uptime);
       drawOledLine(buf, 2);
-      drawOledLine(" ", 3);
+      drawOledLine(uptime, 3);
     } else {
       // Switch mode in super long click
       logLinenl("Super long click detected");
