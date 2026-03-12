@@ -3,6 +3,7 @@
 #include <WiFiClient.h>
 #include <Preferences.h>
 #include <ArduinoOTA.h>
+#include <ESPmDNS.h>
 #include <AsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <Update.h>
