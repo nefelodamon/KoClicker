@@ -93,6 +93,8 @@ bool pendingRestart = false;
 bool staConnected = false;
 bool pendingWifiReconnect = false;
 unsigned long wifiReconnectAt = 0;
+bool pendingNaptEnable = false;
+bool pendingNaptDisable = false;
 //---------------------------------------------------------------------------//
 
 #include "c3_oled.h"
@@ -376,15 +378,14 @@ void onWiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info) {
       staConnected = true;
       KoClickerIpAddress = WiFi.localIP().toString();
       logLinenl("Upstream WiFi connected! IP: %s", KoClickerIpAddress.c_str());
-      ip_napt_enable(WiFi.softAPIP(), 1);
-      logLinenl("NAT enabled - Kindle now has internet access.");
+      pendingNaptEnable = true;
       break;
 
     case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
       if (staConnected) {
         staConnected = false;
-        ip_napt_enable(WiFi.softAPIP(), 0);
         logLinenl("Upstream WiFi disconnected. Retrying in 10s.");
+        pendingNaptDisable = true;
         pendingWifiReconnect = true;
         wifiReconnectAt = millis() + 10000;
       }
@@ -686,6 +687,17 @@ void setup() {
 void loop() {
 
   if (pendingRestart) { delay(100); ESP.restart(); }
+
+  // Handle NAPT enable/disable deferred from WiFi event handler
+  if (pendingNaptEnable) {
+    pendingNaptEnable = false;
+    ip_napt_enable(WiFi.softAPIP(), 1);
+    logLinenl("NAT enabled - Kindle now has internet access.");
+  }
+  if (pendingNaptDisable) {
+    pendingNaptDisable = false;
+    ip_napt_enable(WiFi.softAPIP(), 0);
+  }
 
   // Handle pending upstream WiFi reconnection
   if (pendingWifiReconnect && millis() >= wifiReconnectAt) {
