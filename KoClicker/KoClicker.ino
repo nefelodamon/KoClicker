@@ -11,8 +11,6 @@
 #include "lwip/lwip_napt.h"
 #include "lwip/tcpip.h"
 #include "lwip/etharp.h"
-#include "esp_wifi.h"
-#include "esp_netif.h"
 
 // Hardware pin assignments — selected automatically by target board
 #if defined(CONFIG_IDF_TARGET_ESP32C3)
@@ -668,11 +666,10 @@ void setup() {
     waitingWiFi();
   }
 
-  // Discover Kindle IP — works for both DHCP and static IP.
-  // Method 1: DHCP lease table (fast, DHCP only).
-  // Method 2: ARP table scan by MAC (covers static IP — Kindle emits ARP frames on connect).
+  // Discover Kindle IP via ARP table scan — works for both DHCP and static IP.
+  // Any device joining a network emits ARP frames (gratuitous ARP or DHCP-ARP probe),
+  // which lwIP caches. We match by the Kindle's MAC address from STACONNECTED.
   {
-    // Parse Kindle MAC bytes from lastConnectedMac for ARP matching
     uint8_t kindleMacBytes[6] = {};
     sscanf(lastConnectedMac.c_str(), "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
            &kindleMacBytes[0], &kindleMacBytes[1], &kindleMacBytes[2],
@@ -681,26 +678,6 @@ void setup() {
     unsigned long ipWaitStart = millis();
     while (kindleIpAddress.length() == 0 && millis() - ipWaitStart < 15000) {
       delay(200);
-
-      // Method 1: DHCP lease table
-      wifi_sta_list_t staList;
-      if (esp_wifi_ap_get_sta_list(&staList) == ESP_OK && staList.num > 0) {
-        esp_netif_sta_list_t netifList;
-        esp_netif_t* apNetif = esp_netif_get_handle_from_ifkey("WIFI_AP_DEF");
-        if (apNetif && esp_netif_get_sta_list(&staList, &netifList) == ESP_OK) {
-          for (int i = 0; i < netifList.num; i++) {
-            IPAddress ip(netifList.sta[i].ip.addr);
-            if (ip != IPAddress(0, 0, 0, 0)) {
-              kindleIpAddress = ip.toString();
-              logLinenl("Kindle IP (DHCP): %s", kindleIpAddress.c_str());
-              break;
-            }
-          }
-        }
-      }
-      if (kindleIpAddress.length() > 0) break;
-
-      // Method 2: ARP table scan — matches Kindle's MAC regardless of DHCP or static IP
       LOCK_TCPIP_CORE();
       ip4_addr_t* arpIp;
       struct netif* arpNetif;
