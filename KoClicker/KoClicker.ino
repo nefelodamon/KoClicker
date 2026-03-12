@@ -571,7 +571,12 @@ void setup() {
   // Register WiFi event handler before starting WiFi
   WiFi.onEvent(onWiFiEvent);
 
-  // Always start AP
+  // Always start AP with fixed IP
+  WiFi.softAPConfig(
+    IPAddress(192, 168, 100, 100),  // AP IP
+    IPAddress(192, 168, 100, 100),  // gateway
+    IPAddress(255, 255, 255, 0)     // subnet
+  );
   WiFi.softAP(apSsid.c_str(), apPass.c_str());
   KoClickerIpAddress = WiFi.softAPIP().toString();
   logLinenl("AP started. SSID: %s  IP: %s", apSsid.c_str(), KoClickerIpAddress.c_str());
