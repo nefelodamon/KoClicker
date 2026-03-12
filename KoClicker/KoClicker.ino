@@ -10,6 +10,8 @@
 #include <ArduinoJson.h>
 #include "lwip/lwip_napt.h"
 #include "lwip/tcpip.h"
+#include "esp_wifi.h"
+#include "esp_netif.h"
 
 // Hardware pin assignments — selected automatically by target board
 #if defined(CONFIG_IDF_TARGET_ESP32C3)
@@ -665,13 +667,31 @@ void setup() {
     waitingWiFi();
   }
 
-  // Wait for STAIPASSIGNED to fire and populate kindleIpAddress (comes after STACONNECTED)
-  unsigned long ipWaitStart = millis();
-  while (kindleIpAddress.length() == 0 && millis() - ipWaitStart < 5000) {
-    delay(100);
-  }
-  if (kindleIpAddress.length() == 0) {
-    logLinenl("Warning: Kindle IP not assigned within 5s.");
+  // Wait for Kindle IP — try STAIPASSIGNED event first, fall back to polling the station list.
+  // STAIPASSIGNED does not fire reliably in AP+STA mode on arduino-esp32 3.x.
+  {
+    unsigned long ipWaitStart = millis();
+    while (kindleIpAddress.length() == 0 && millis() - ipWaitStart < 10000) {
+      delay(200);
+      wifi_sta_list_t staList;
+      if (esp_wifi_ap_get_sta_list(&staList) == ESP_OK && staList.num > 0) {
+        esp_netif_sta_list_t netifList;
+        esp_netif_t* apNetif = esp_netif_get_handle_from_ifkey("WIFI_AP_DEF");
+        if (apNetif && esp_netif_get_sta_list(&staList, &netifList) == ESP_OK) {
+          for (int i = 0; i < netifList.num; i++) {
+            IPAddress ip(netifList.sta[i].ip.addr);
+            if (ip != IPAddress(0, 0, 0, 0)) {
+              kindleIpAddress = ip.toString();
+              logLinenl("Kindle IP (sta list): %s", kindleIpAddress.c_str());
+              break;
+            }
+          }
+        }
+      }
+    }
+    if (kindleIpAddress.length() == 0) {
+      logLinenl("Warning: Kindle IP not assigned within 10s.");
+    }
   }
 
   bool connected = webCall("event/", 100);
