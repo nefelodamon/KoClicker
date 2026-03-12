@@ -848,11 +848,15 @@ void loop() {
         pageTurn(1, 150);
       }
     } else if (duration < longClick) {
-      // Show average time per page on long click
+      // Line 2: uptime since boot
+      unsigned long s = millis() / 1000;
+      char uptime[16];
+      snprintf(uptime, sizeof(uptime), "%luh%02lum%02lus", s / 3600, (s % 3600) / 60, s % 60);
+      // Line 3: average time per page
       int absPages = abs(pageCounter);
       char avgBuf[16];
       if (absPages > 0) {
-        unsigned long avgSec = (millis() / 1000) / (unsigned long)absPages;
+        unsigned long avgSec = s / (unsigned long)absPages;
         if (avgSec >= 60) {
           snprintf(avgBuf, sizeof(avgBuf), "%lum%02lus", avgSec / 60, avgSec % 60);
         } else {
@@ -861,8 +865,8 @@ void loop() {
       } else {
         snprintf(avgBuf, sizeof(avgBuf), "---");
       }
-      logLinenl("Long click - avg/page: %s  pages: %d", avgBuf, pageCounter);
-      drawOledLine("Avg/page:", 2);
+      logLinenl("Long click - uptime: %s  avg/page: %s", uptime, avgBuf);
+      drawOledLine(uptime, 2);
       drawOledLine(avgBuf, 3);
     } else {
       // Switch mode in super long click
