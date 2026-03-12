@@ -68,7 +68,7 @@ const int KOREADER_PORT = 8080;
 const uint32_t DEF_DOUBLE_CLICK_MS = 300;
 
 // Runtime variables
-String KoClickerVersion = "v1.0.9";
+String KoClickerVersion = "v1.1.0";
 uint32_t shortClick;
 uint32_t longClick;
 uint32_t sleepCutoff;
@@ -848,15 +848,22 @@ void loop() {
         pageTurn(1, 150);
       }
     } else if (duration < longClick) {
-      // Show page counter and uptime on long click
-      char buf[16];
-      snprintf(buf, sizeof(buf), "Pages: %d", pageCounter);
-      unsigned long s = millis() / 1000;
-      char uptime[16];
-      snprintf(uptime, sizeof(uptime), "%luh%02lum%02lus", s / 3600, (s % 3600) / 60, s % 60);
-      logLinenl("Long click - %s  uptime: %s", buf, uptime);
-      drawOledLine(buf, 2);
-      drawOledLine(uptime, 3);
+      // Show average time per page on long click
+      int absPages = abs(pageCounter);
+      char avgBuf[16];
+      if (absPages > 0) {
+        unsigned long avgSec = (millis() / 1000) / (unsigned long)absPages;
+        if (avgSec >= 60) {
+          snprintf(avgBuf, sizeof(avgBuf), "%lum%02lus", avgSec / 60, avgSec % 60);
+        } else {
+          snprintf(avgBuf, sizeof(avgBuf), "%lus", avgSec);
+        }
+      } else {
+        snprintf(avgBuf, sizeof(avgBuf), "---");
+      }
+      logLinenl("Long click - avg/page: %s  pages: %d", avgBuf, pageCounter);
+      drawOledLine("Avg/page:", 2);
+      drawOledLine(avgBuf, 3);
     } else {
       // Switch mode in super long click
       logLinenl("Super long click detected");

@@ -12,7 +12,7 @@ KoClicker hosts a small web server and sends HTTP GET requests to KOReader's HTT
 |---|---|
 | Short press (`< 500 ms`) | Next page |
 | Double-click (two short presses within `300 ms`) | Previous page |
-| Long press (`500 ms – 5 s`) | Show page counter on OLED line 2 |
+| Long press (`500 ms – 5 s`) | Show average time per page on OLED |
 | Super-long press (`> 5 s`) | Switch Wi-Fi mode (restarts) |
 
 Visual feedback is provided via three LEDs (red, green, blue) and an optional OLED display.
@@ -142,7 +142,7 @@ All settings are stored in NVS and configurable via `/settings` or the JSON API 
 
 KoClicker keeps a running count of page turns since the last boot. It increments by 1 on a successful next-page call and decrements by 1 on a successful previous-page call. The counter is displayed on the right side of OLED line 1 and resets to 0 on every reboot or wake from sleep.
 
-A **double-click** (two short presses within the `doubleClickMs` window, default 300 ms) turns the page back (previous page). A **long press** displays the current page counter as `Pages: N` on OLED line 2 without turning a page.
+A **double-click** (two short presses within the `doubleClickMs` window, default 300 ms) turns the page back (previous page). A **long press** displays the average time per page (`Avg/page:` on line 2, formatted time on line 3) without turning a page. If no pages have been turned yet, it shows `---`.
 
 ---
 
