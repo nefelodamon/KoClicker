@@ -10,6 +10,7 @@
 #include <ArduinoJson.h>
 #include "lwip/lwip_napt.h"
 #include "lwip/tcpip.h"
+#include "lwip/etharp.h"
 #include "esp_wifi.h"
 #include "esp_netif.h"
 
@@ -667,12 +668,21 @@ void setup() {
     waitingWiFi();
   }
 
-  // Wait for Kindle IP — try STAIPASSIGNED event first, fall back to polling the station list.
-  // STAIPASSIGNED does not fire reliably in AP+STA mode on arduino-esp32 3.x.
+  // Discover Kindle IP — works for both DHCP and static IP.
+  // Method 1: DHCP lease table (fast, DHCP only).
+  // Method 2: ARP table scan by MAC (covers static IP — Kindle emits ARP frames on connect).
   {
+    // Parse Kindle MAC bytes from lastConnectedMac for ARP matching
+    uint8_t kindleMacBytes[6] = {};
+    sscanf(lastConnectedMac.c_str(), "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+           &kindleMacBytes[0], &kindleMacBytes[1], &kindleMacBytes[2],
+           &kindleMacBytes[3], &kindleMacBytes[4], &kindleMacBytes[5]);
+
     unsigned long ipWaitStart = millis();
-    while (kindleIpAddress.length() == 0 && millis() - ipWaitStart < 10000) {
+    while (kindleIpAddress.length() == 0 && millis() - ipWaitStart < 15000) {
       delay(200);
+
+      // Method 1: DHCP lease table
       wifi_sta_list_t staList;
       if (esp_wifi_ap_get_sta_list(&staList) == ESP_OK && staList.num > 0) {
         esp_netif_sta_list_t netifList;
@@ -682,15 +692,31 @@ void setup() {
             IPAddress ip(netifList.sta[i].ip.addr);
             if (ip != IPAddress(0, 0, 0, 0)) {
               kindleIpAddress = ip.toString();
-              logLinenl("Kindle IP (sta list): %s", kindleIpAddress.c_str());
+              logLinenl("Kindle IP (DHCP): %s", kindleIpAddress.c_str());
               break;
             }
           }
         }
       }
+      if (kindleIpAddress.length() > 0) break;
+
+      // Method 2: ARP table scan — matches Kindle's MAC regardless of DHCP or static IP
+      LOCK_TCPIP_CORE();
+      ip4_addr_t* arpIp;
+      struct netif* arpNetif;
+      struct eth_addr* arpMac;
+      for (size_t i = 0; i < ARP_TABLE_SIZE; i++) {
+        if (etharp_get_entry(i, &arpIp, &arpNetif, &arpMac) &&
+            memcmp(arpMac->addr, kindleMacBytes, 6) == 0) {
+          kindleIpAddress = IPAddress(arpIp->addr).toString();
+          logLinenl("Kindle IP (ARP): %s", kindleIpAddress.c_str());
+          break;
+        }
+      }
+      UNLOCK_TCPIP_CORE();
     }
     if (kindleIpAddress.length() == 0) {
-      logLinenl("Warning: Kindle IP not assigned within 10s.");
+      logLinenl("Warning: Kindle IP not found within 15s.");
     }
   }
 
