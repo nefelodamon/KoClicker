@@ -592,8 +592,8 @@ void setup() {
 
   // Always start AP with fixed IP
   WiFi.softAPConfig(
-    IPAddress(192, 168, 100, 1),  // AP IP
-    IPAddress(192, 168, 100, 1),  // gateway
+    IPAddress(192, 168, 99, 1),  // AP IP
+    IPAddress(192, 168, 99, 1),  // gateway
     IPAddress(255, 255, 255, 0)     // subnet
   );
   WiFi.softAP(apSsid.c_str(), apPass.c_str());
