@@ -629,6 +629,7 @@ void setup() {
   ArduinoOTA.setHostname("KoClicker");
   ArduinoOTA.setPassword(otaPassword.c_str());
   ArduinoOTA.begin();
+  MDNS.addService("http", "tcp", 80);
 
   // Wait for Kindle to connect to AP
   drawOledLine("Waiting", 2);
