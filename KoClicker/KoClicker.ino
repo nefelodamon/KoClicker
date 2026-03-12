@@ -9,6 +9,7 @@
 #include <Update.h>
 #include <ArduinoJson.h>
 #include "lwip/lwip_napt.h"
+#include "lwip/tcpip.h"
 
 // Hardware pin assignments — selected automatically by target board
 #if defined(CONFIG_IDF_TARGET_ESP32C3)
@@ -664,6 +665,15 @@ void setup() {
     waitingWiFi();
   }
 
+  // Wait for STAIPASSIGNED to fire and populate kindleIpAddress (comes after STACONNECTED)
+  unsigned long ipWaitStart = millis();
+  while (kindleIpAddress.length() == 0 && millis() - ipWaitStart < 5000) {
+    delay(100);
+  }
+  if (kindleIpAddress.length() == 0) {
+    logLinenl("Warning: Kindle IP not assigned within 5s.");
+  }
+
   bool connected = webCall("event/", 100);
 
   sleep_time_reset = millis();
@@ -688,15 +698,20 @@ void loop() {
 
   if (pendingRestart) { delay(100); ESP.restart(); }
 
-  // Handle NAPT enable/disable deferred from WiFi event handler
+  // Handle NAPT enable/disable deferred from WiFi event handler.
+  // ip_napt_enable() requires the lwIP core lock — acquire it here on the main task.
   if (pendingNaptEnable) {
     pendingNaptEnable = false;
+    LOCK_TCPIP_CORE();
     ip_napt_enable(WiFi.softAPIP(), 1);
+    UNLOCK_TCPIP_CORE();
     logLinenl("NAT enabled - Kindle now has internet access.");
   }
   if (pendingNaptDisable) {
     pendingNaptDisable = false;
+    LOCK_TCPIP_CORE();
     ip_napt_enable(WiFi.softAPIP(), 0);
+    UNLOCK_TCPIP_CORE();
   }
 
   // Handle pending upstream WiFi reconnection
