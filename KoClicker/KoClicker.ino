@@ -8,9 +8,9 @@
 #include <ESPAsyncWebServer.h>
 #include <Update.h>
 #include <ArduinoJson.h>
-#include "lwip/lwip_napt.h"
 #include "lwip/tcpip.h"
 #include "lwip/etharp.h"
+#include "esp_netif.h"
 
 // Hardware pin assignments — selected automatically by target board
 #if defined(CONFIG_IDF_TARGET_ESP32C3)
@@ -722,19 +722,19 @@ void loop() {
   if (pendingRestart) { delay(100); ESP.restart(); }
 
   // Handle NAPT enable/disable deferred from WiFi event handler.
-  // ip_napt_enable() requires the lwIP core lock — acquire it here on the main task.
+  // esp_netif_napt_enable/disable handle locking internally (ESP-IDF 5.x API).
   if (pendingNaptEnable) {
     pendingNaptEnable = false;
-    LOCK_TCPIP_CORE();
-    ip_napt_enable(WiFi.softAPIP(), 1);
-    UNLOCK_TCPIP_CORE();
-    logLinenl("NAT enabled - Kindle now has internet access.");
+    esp_netif_t* apNetif = esp_netif_get_handle_from_ifkey("WIFI_AP_DEF");
+    if (apNetif) {
+      esp_err_t err = esp_netif_napt_enable(apNetif);
+      logLinenl("NAT enabled (err=%d) - Kindle now has internet access.", err);
+    }
   }
   if (pendingNaptDisable) {
     pendingNaptDisable = false;
-    LOCK_TCPIP_CORE();
-    ip_napt_enable(WiFi.softAPIP(), 0);
-    UNLOCK_TCPIP_CORE();
+    esp_netif_t* apNetif = esp_netif_get_handle_from_ifkey("WIFI_AP_DEF");
+    if (apNetif) esp_netif_napt_disable(apNetif);
   }
 
   // Handle pending upstream WiFi reconnection
