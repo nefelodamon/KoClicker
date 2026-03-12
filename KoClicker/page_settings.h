@@ -17,10 +17,10 @@ String buildSettingsHtml() {
             "</style>");
 
   html += F("<h1>Device Settings</h1>");
-  html += F("<div class='card'><div><strong>Current mode: </strong> <span class='path'>");
-  html += mode;
-  html += F("</span></div><div><strong>Kindle IP Address:</strong> <span class='path'>");
+  html += F("<div class='card'><div><strong>KoClicker IP:</strong> <span class='path'>");
   html += KoClickerIpAddress;
+  html += F("</span></div><div><strong>Kindle IP:</strong> <span class='path'>");
+  html += kindleIpAddress;
   html += F("</span></div></div>");
 
   html += F("<div class='card'>");
@@ -32,12 +32,11 @@ String buildSettingsHtml() {
   html += F("<div style='margin-top:10px'><label for='httpConnectTimeout'>HTTP connect timeout (ms)</label><input id='httpConnectTimeout' type='number' min='1' step='1'></div>");
   html += F("<div style='margin-top:10px'><label for='delayBetweenCalls'>Delay between calls (ms)</label><input id='delayBetweenCalls' type='number' min='0' step='1'></div>");
   html += F("<hr style='border-color:#222;margin:12px 0'>");
-  html += F("<div style='margin-top:10px'><label for='kindlhmipaddr'>Kindle Home IP address</label><input id='kindlhmipaddr' type='text' placeholder='192.168.x.x'></div>");
   html += F("<div style='margin-top:10px'><label for='mac_filter'>MAC allow-list (comma-separated, leave empty to allow all)</label><input id='mac_filter' type='text' placeholder='AA:BB:CC:DD:EE:FF, 11:22:33:44:55:66'></div>");
-  html += F("<div style='margin-top:10px'><label for='hm_ssid'>Home SSID</label><input id='hm_ssid' type='text'></div>");
-  html += F("<div style='margin-top:10px'><label for='hm_password'>Home password</label><input id='hm_password' type='password'></div>");
-  html += F("<div style='margin-top:10px'><label for='hs_ssid'>Hotspot SSID</label><input id='hs_ssid' type='text' placeholder='Christos-HotSpot'></div>");
-  html += F("<div style='margin-top:10px'><label for='hs_password'>Hotspot password</label><input id='hs_password' type='password'></div>");
+  html += F("<div style='margin-top:10px'><label for='hm_ssid'>WiFi Network 1 SSID</label><input id='hm_ssid' type='text'></div>");
+  html += F("<div style='margin-top:10px'><label for='hm_password'>WiFi Network 1 password</label><input id='hm_password' type='password'></div>");
+  html += F("<div style='margin-top:10px'><label for='hs_ssid'>WiFi Network 2 SSID</label><input id='hs_ssid' type='text'></div>");
+  html += F("<div style='margin-top:10px'><label for='hs_password'>WiFi Network 2 password</label><input id='hs_password' type='password'></div>");
   html += F("<div style='margin-top:10px'><label for='ap_ssid'>AP SSID</label><input id='ap_ssid' type='text'></div>");
   html += F("<div style='margin-top:10px'><label for='ap_password'>AP password</label><input id='ap_password' type='password'></div>");
   html += F("<div style='margin-top:10px'><label for='ota_password'>OTA password</label><input id='ota_password' type='password'></div>");
@@ -88,9 +87,6 @@ String buildSettingsHtml() {
   html += F("    el('delayBetweenCalls').value = j.delayBetweenCalls || ");
   html += DEF_DELAY_BETWEEN_CALLS;
   html += F(";");
-
-  // kindle home IP
-  html += F("    el('kindlhmipaddr').value = j.kindlhmipaddr || '';");
 
   // MAC filter
   html += F("    el('mac_filter').value = j.mac_filter || '';");
@@ -163,8 +159,7 @@ String buildSettingsHtml() {
   html += F(",");
 
   // network / auth fields
-  html += F("    kindlhmipaddr: el('kindlhmipaddr').value || '',"
-            "    mac_filter: el('mac_filter').value || '',"
+  html += F("    mac_filter: el('mac_filter').value || '',"
             "    hm_ssid: el('hm_ssid').value || '', hm_password: el('hm_password').value || '',"
             "    hs_ssid: el('hs_ssid').value || '', hs_password: el('hs_password').value || '',"
             "    ap_ssid: el('ap_ssid').value || '', ap_password: el('ap_password').value || '',"

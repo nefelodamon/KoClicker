@@ -7,6 +7,7 @@
 #include <ESPAsyncWebServer.h>
 #include <Update.h>
 #include <ArduinoJson.h>
+#include "lwip/lwip_napt.h"
 
 // Hardware pin assignments — selected automatically by target board
 #if defined(CONFIG_IDF_TARGET_ESP32C3)
@@ -38,7 +39,6 @@ const char* PREF_NAMESPACE = "settings";
 const char* K_SHORT_CLICK = "shortClick";
 const char* K_LONG_CLICK = "longClick";
 const char* K_SLEEP_CUTOFF = "sleepCutoff";
-const char* K_HM_IP_ADDRESS = "kindleHmIpAddr";
 const char* K_HTTP_CALL_TIMEOUT = "httpCallTO";
 const char* K_HTTP_CONNECT_TIMEOUT = "httpConnTO";
 const char* K_DELAY_BETWEEN = "delayBetween";
@@ -49,8 +49,6 @@ const char* K_HM_PASS = "hm_pass";
 const char* K_AP_SSID = "ap_ssid";
 const char* K_AP_PASS = "ap_pass";
 const char* K_OTA_PASS = "ota_pass";
-const char* K_MODE = "mode";
-const char* K_LAST_GOOD_IP = "last_Good_Ip";
 const char* K_MAC_FILTER = "mac_filter";
 const char* K_DOUBLE_CLICK_MS = "dblClickMs";
 
@@ -72,7 +70,6 @@ String KoClickerVersion = "v1.1.0";
 uint32_t shortClick;
 uint32_t longClick;
 uint32_t sleepCutoff;
-String hmkindleIp;
 int httpCallTimeout;
 int httpConnectTimeout;
 int delayBetweenCalls;
@@ -85,7 +82,6 @@ String apPass;
 String otaPassword;
 String kindleIpAddress;
 String KoClickerIpAddress;
-String mode;
 unsigned long sleep_time_reset;
 String macFilter;
 String lastConnectedMac;
@@ -93,6 +89,10 @@ bool stationAllowed = false;
 int pageCounter = 0;
 uint32_t doubleClickMs;
 bool pendingRestart = false;
+bool staConnected = false;
+bool pendingWifiReconnect = false;
+unsigned long wifiReconnectAt = 0;
+int wifiNetworkAttempt = 0;
 //---------------------------------------------------------------------------//
 
 #include "c3_oled.h"
@@ -107,7 +107,6 @@ void handleGetSettings(AsyncWebServerRequest* request) {
   doc["shortClick"] = prefs.getUInt(K_SHORT_CLICK, DEF_SHORT_CLICK);
   doc["longClick"] = prefs.getUInt(K_LONG_CLICK, DEF_LONG_CLICK);
   doc["sleepCutoff"] = prefs.getUInt(K_SLEEP_CUTOFF, DEF_SLEEP_CUTOFF);
-  doc["kindlhmipaddr"] = prefs.getString(K_HM_IP_ADDRESS);  //CHG
   doc["httpCallTimeout"] = prefs.getInt(K_HTTP_CALL_TIMEOUT, DEF_HTTP_CALL_TIMEOUT);
   doc["httpConnectTimeout"] = prefs.getInt(K_HTTP_CONNECT_TIMEOUT, DEF_HTTP_CONNECT_TIMEOUT);
   doc["delayBetweenCalls"] = prefs.getInt(K_DELAY_BETWEEN, DEF_DELAY_BETWEEN_CALLS);
@@ -143,7 +142,6 @@ void handlePostSettings(AsyncWebServerRequest* request, uint8_t* data, size_t le
     if (sc > 0 && sc < 120000) sc = 120000;
     prefs.putUInt(K_SLEEP_CUTOFF, sc);
   }
-  if (doc.containsKey("kindlhmipaddr")) prefs.putString(K_HM_IP_ADDRESS, doc["kindlhmipaddr"].as<String>());  //CHG
   if (doc.containsKey("httpCallTimeout")) prefs.putInt(K_HTTP_CALL_TIMEOUT, doc["httpCallTimeout"]);
   if (doc.containsKey("httpConnectTimeout")) prefs.putInt(K_HTTP_CONNECT_TIMEOUT, doc["httpConnectTimeout"]);
   if (doc.containsKey("delayBetweenCalls")) prefs.putInt(K_DELAY_BETWEEN, doc["delayBetweenCalls"]);
@@ -217,16 +215,6 @@ void waitingWiFi() {
   Serial.print(".");
 }
 
-void modeAnimation(unsigned char colour) {
-  digitalWrite(colour, ON);
-  drawOledLine("Mode:", 2);
-  if (colour == BLUE_LED)        drawOledLine("Home", 3);
-  else if (colour == GREEN_LED)  drawOledLine("HotSpot", 3);
-  else                           drawOledLine("AccessPoint", 3);
-  delay(3000);
-  digitalWrite(colour, OFF);
-}
-
 void sleep() {
   logLinenl("Going to sleep... Goodnight!");
   drawOledLine("Going to", 2);
@@ -245,31 +233,21 @@ void sleep() {
     esp_deep_sleep_start();
 }
 
-void switchMode() {
-  String newMode;
-  drawOledLine("Chg mode to", 2);
-
-  if (mode == "HotSpot") {
-    newMode = "Home";
-    drawOledLine(newMode.c_str(), 3);
-    modeAnimation(BLUE_LED);
-  } else if (mode == "Home") {
-    newMode = "AccessPoint";
-    drawOledLine(newMode.c_str(), 3);
-    modeAnimation(RED_LED);
-  } else {
-    newMode = "HotSpot";
-    drawOledLine(newMode.c_str(), 3);
-    modeAnimation(GREEN_LED);
+void connectToUpstreamWifi() {
+  if (hsSsid.length() == 0 && hmSsid.length() == 0) {
+    logLinenl("No upstream WiFi networks configured.");
+    return;
   }
-
-  logLinenl("Changing Mode to %s", newMode.c_str());
-  prefs.putString(K_MODE, newMode);
-  logLinenl("Resetting board...Bye bye!");
-
-  WiFi.disconnect();
-  delay(1000);
-  ESP.restart();
+  // Alternate between network 1 (hs) and network 2 (hm) on each attempt
+  bool tryNet1 = (wifiNetworkAttempt % 2 == 0) ? (hsSsid.length() > 0) : false;
+  if (tryNet1 || hmSsid.length() == 0) {
+    logLinenl("Connecting to WiFi Network 1: %s", hsSsid.c_str());
+    WiFi.begin(hsSsid.c_str(), hsPass.c_str());
+  } else {
+    logLinenl("Connecting to WiFi Network 2: %s", hmSsid.c_str());
+    WiFi.begin(hmSsid.c_str(), hmPass.c_str());
+  }
+  wifiNetworkAttempt++;
 }
 
 void pageTurn(int direction, int waitTime) {
@@ -375,6 +353,24 @@ void onWiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info) {
       logLinenl("Station disconnected.");
       break;
 
+    case ARDUINO_EVENT_WIFI_STA_GOT_IP:
+      staConnected = true;
+      KoClickerIpAddress = WiFi.localIP().toString();
+      logLinenl("Upstream WiFi connected! IP: %s", KoClickerIpAddress.c_str());
+      ip_napt_enable(WiFi.softAPIP(), 1);
+      logLinenl("NAT enabled - Kindle now has internet access.");
+      break;
+
+    case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
+      if (staConnected) {
+        staConnected = false;
+        ip_napt_enable(WiFi.softAPIP(), 0);
+        logLinenl("Upstream WiFi disconnected. Retrying in 10s.");
+        pendingWifiReconnect = true;
+        wifiReconnectAt = millis() + 10000;
+      }
+      break;
+
     default:
       break;
   }
@@ -419,9 +415,9 @@ void handleCommand(AsyncWebSocketClient* client, String cmd) {
       "  heap     - free / min-free heap\n"
       "  ip       - device IP address\n"
       "  kindle   - current Kindle IP\n"
-      "  mode     - WiFi mode (AP/HotSpot/Home)\n"
-      "  wifi     - WiFi SSID + RSSI\n"
-      "  rssi     - WiFi signal strength (dBm)\n"
+      "  mode     - AP+STA connection status\n"
+      "  wifi     - AP stations + upstream WiFi info\n"
+      "  rssi     - upstream WiFi signal strength (dBm)\n"
       "  settings - dump key runtime settings\n"
       "  sleep    - sleep cutoff + idle time\n"
       "  restart  - restart the device\n");
@@ -444,31 +440,28 @@ void handleCommand(AsyncWebSocketClient* client, String cmd) {
   } else if (cmd == "kindle") {
     client->text("kindle_ip=" + (kindleIpAddress.length() ? kindleIpAddress : String("(not set)")) + "\n");
   } else if (cmd == "mode") {
-    client->text("mode=" + mode + "\n");
+    String status = "AP+STA  ap_stations=" + String(WiFi.softAPgetStationNum());
+    status += "  sta=" + String(staConnected ? "connected" : "disconnected") + "\n";
+    client->text(status);
   } else if (cmd == "wifi") {
-    if (mode == "AccessPoint") {
-      client->text("wifi=AP ssid=" + apSsid + " stations=" + String(WiFi.softAPgetStationNum()) + "\n");
-    } else {
-      char buf[80];
-      snprintf(buf, sizeof(buf), "wifi=STA ssid=%s rssi=%d dBm status=%d\n",
-               WiFi.SSID().c_str(), WiFi.RSSI(), (int)WiFi.status());
-      client->text(buf);
-    }
+    char buf[160];
+    snprintf(buf, sizeof(buf), "ap: ssid=%s stations=%d\nsta: ssid=%s rssi=%d dBm connected=%s\n",
+             apSsid.c_str(), WiFi.softAPgetStationNum(),
+             WiFi.SSID().c_str(), WiFi.RSSI(), staConnected ? "yes" : "no");
+    client->text(buf);
   } else if (cmd == "rssi") {
-    if (mode == "AccessPoint") {
-      client->text("rssi=N/A (AP mode)\n");
-    } else {
+    if (staConnected) {
       client->text("rssi=" + String(WiFi.RSSI()) + " dBm\n");
+    } else {
+      client->text("rssi=N/A (upstream not connected)\n");
     }
   } else if (cmd == "settings") {
     char buf[256];
     snprintf(buf, sizeof(buf),
       "shortClick=%u ms  longClick=%u ms  sleepCutoff=%u ms\n"
-      "httpCallTO=%d ms  httpConnTO=%d ms  delayBetween=%d ms\n"
-      "kindle_hm_ip=%s\n",
+      "httpCallTO=%d ms  httpConnTO=%d ms  delayBetween=%d ms\n",
       shortClick, longClick, sleepCutoff,
-      httpCallTimeout, httpConnectTimeout, delayBetweenCalls,
-      hmkindleIp.c_str());
+      httpCallTimeout, httpConnectTimeout, delayBetweenCalls);
     client->text(buf);
   } else if (cmd == "sleep") {
     unsigned long idle = millis() - sleep_time_reset;
@@ -519,9 +512,6 @@ void loadPreferences() {
 
   sleepCutoff = prefs.getUInt(K_SLEEP_CUTOFF, DEF_SLEEP_CUTOFF);
   logLinenl("Load Preference sleepCutoff: %u", sleepCutoff);
-
-  hmkindleIp = prefs.getString(K_HM_IP_ADDRESS);
-  logLinenl("Load Preference hmkindleIp: %s", hmkindleIp.c_str());
 
   httpCallTimeout = prefs.getInt(K_HTTP_CALL_TIMEOUT, DEF_HTTP_CALL_TIMEOUT);
   logLinenl("Load Preference httpCallTimeout: %d", httpCallTimeout);
@@ -578,47 +568,19 @@ void setup() {
   startupAnimation();
 #endif
 
-  bool connected = false;
-  mode = prefs.getString(K_MODE, "");
+  // Register WiFi event handler before starting WiFi
+  WiFi.onEvent(onWiFiEvent);
 
-  //Set default mode if not present
-  if (mode == "") {
-    Serial.println("No Mode found, setting up the default mode to - HotSpot");
-    prefs.putString(K_MODE, "AccessPoint");
-    mode = "AccessPoint";
-  } else {
-    Serial.println("Mode found: " + mode);
-  }
+  // Always start AP
+  WiFi.softAP(apSsid.c_str(), apPass.c_str());
+  KoClickerIpAddress = WiFi.softAPIP().toString();
+  logLinenl("AP started. SSID: %s  IP: %s", apSsid.c_str(), KoClickerIpAddress.c_str());
+  drawOledLine("AP started", 2);
+  drawOledLine(KoClickerIpAddress.c_str(), 3);
+  delay(500);
 
-  if (digitalRead(BUTTON) == LOW) {
-    Serial.println("Aborting startup and switching modes...");
-    switchMode();
-  }
-
-  // Start WiFi (no waiting yet)
-  if (mode == "AccessPoint") {
-    WiFi.onEvent(onWiFiEvent);
-    WiFi.softAP(apSsid, apPass);
-    KoClickerIpAddress = WiFi.softAPIP().toString();
-    Serial.println("AP Started. KoClicker IP: " + KoClickerIpAddress);
-    modeAnimation(RED_LED);
-  } else {
-    //Connect to WiFi
-    const char* ssid;
-    const char* password;
-    if (mode == "HotSpot") {
-      ssid = hsSsid.c_str();
-      password = hsPass.c_str();
-      modeAnimation(GREEN_LED);
-    } else {
-      ssid = hmSsid.c_str();
-      password = hmPass.c_str();
-      kindleIpAddress = hmkindleIp;
-      modeAnimation(BLUE_LED);
-    }
-    WiFi.begin(ssid, password);
-    Serial.print("Connecting to " + String(ssid) + " ...");
-  }
+  // Start STA upstream connection attempt (non-blocking)
+  connectToUpstreamWifi();
 
   // OTA update page
   server.on("/update", HTTP_GET, [](AsyncWebServerRequest* req) {
@@ -638,7 +600,6 @@ void setup() {
     }
   );
 
-  // Start web server before waiting for any client/WiFi connection
   // WebSocket endpoint and event hook
   ws.onEvent(onWsEvent);
   server.addHandler(&ws);
@@ -664,96 +625,34 @@ void setup() {
 
   server.begin();
 
-  // Start OTA before waiting loop so it's available immediately
   Serial.println("Starting ArduinoOTA function");
   ArduinoOTA.setHostname("KoClicker");
   ArduinoOTA.setPassword(otaPassword.c_str());
   ArduinoOTA.begin();
 
-  drawOledLine("Connecting", 2);
-
-  // Now wait for a client/WiFi connection
-  if (mode == "AccessPoint") {
-    Serial.print("Waiting for an allowed Kindle to connect");
-    while (!stationAllowed) {
-      if (digitalRead(BUTTON) == LOW) {
-        Serial.println("\nAborting WiFi connection and switching modes...");
-        switchMode();
-      }
-      waitingWiFi();
-    }
-    connected = webCall("event/", 10);
-
-  } else {
-    //Connection in progress - 1 second blink
-    while (WiFi.status() != WL_CONNECTED) {
-      if (digitalRead(BUTTON) == LOW) {
-        Serial.println("\nAborting WiFi connection and switching modes...");
-        switchMode();
-      }
-      waitingWiFi();
-    }
+  // Wait for Kindle to connect to AP
+  drawOledLine("Waiting", 2);
+  drawOledLine("for Kindle", 3);
+  Serial.print("Waiting for an allowed Kindle to connect");
+  while (!stationAllowed) {
+    waitingWiFi();
   }
 
-  drawOledLine("Connected", 2);
-  drawOledLine("", 3);
-
-
-  // Initial logs
-  if (mode != "AccessPoint") {
-    KoClickerIpAddress = WiFi.localIP().toString();
-  }
-  logLinenl("Wi-Fi Connection established!");
-  logLinenl("KoClicker IP address: %s", KoClickerIpAddress.c_str());
-
-  drawOledLine("Connected", 2);
-  drawOledLine(KoClickerIpAddress.c_str(), 3);
-
-  if (mode == "HotSpot") {
-    kindleIpAddress = prefs.getString(K_LAST_GOOD_IP, "");
-    logLinenl("Testing last Kindle HotSpot IP: %s", kindleIpAddress.c_str());
-    connected = webCall("event/", 100);
-    if (!connected) {
-      logLinenl("Unable to connect with last Kindle HotSpot IP. Starting scan");
-      IPAddress broadCast = WiFi.localIP();
-      connected = false;
-      logLinenl("Starting scan!");
-        drawOledLine("Scanning", 2);
-      for (int i = 255; i > 0; i--) {
-        if (digitalRead(BUTTON) == LOW) {
-          logLinenl("Aborting scan!");
-          switchMode();
-        }
-        broadCast[3] = i;
-        kindleIpAddress = broadCast.toString();
-        drawOledLine(kindleIpAddress.c_str(), 3);
-        logLinenl("Scanning...Testing: %s", kindleIpAddress.c_str());
-        connected = webCall("event/", 10);
-        if (connected) {
-          prefs.putString(K_LAST_GOOD_IP, kindleIpAddress);
-          break;
-        }
-      }
-    } else {
-      logLinenl("Connected with last Kindle HotSpot IP: %s", kindleIpAddress.c_str());
-      drawOledLine("Connected", 2);
-      drawOledLine(kindleIpAddress.c_str(), 3);
-    }
-  }
+  bool connected = webCall("event/", 100);
 
   sleep_time_reset = millis();
   delay(750);
   connected = webCall("event/", 100);
 
   if (connected) {
-    logLinenl("Kindle found and connected.... Waiting for input");
+    logLinenl("Kindle found and connected. Waiting for input.");
     drawOledLine("Kindle", 2);
     drawOledLine("Found", 3);
     webCall("event/ToggleNightMode", 100);
     delay(1000);
     webCall("event/ToggleNightMode", 100);
   } else {
-    logLinenl("Cant find Kindle after scan... Please change mode");
+    logLinenl("Can't find Kindle after connection. Check KOReader HTTP server.");
     drawOledLine("Kindle", 2);
     drawOledLine("Not found", 3);
   }
@@ -763,6 +662,12 @@ void loop() {
 
   if (pendingRestart) { delay(100); ESP.restart(); }
 
+  // Handle pending upstream WiFi reconnection
+  if (pendingWifiReconnect && millis() >= wifiReconnectAt) {
+    pendingWifiReconnect = false;
+    connectToUpstreamWifi();
+  }
+
   digitalWrite(RED_LED, OFF);
   digitalWrite(GREEN_LED, OFF);
   digitalWrite(BLUE_LED, OFF);
@@ -770,8 +675,8 @@ void loop() {
   oledTick();
 
   unsigned long sleep_Timer = millis() - sleep_time_reset;
-  //Sleep if innactive or not connected to WiFi or Kindle disconnected. Do not sleep if sleepCutoff is 0
-  if (sleepCutoff > 0 && (sleep_Timer > sleepCutoff || (mode == "AccessPoint" ? WiFi.softAPgetStationNum() == 0 : WiFi.status() != WL_CONNECTED))) {
+  // Sleep on inactivity or when Kindle disconnects from AP. Skip if sleepCutoff is 0.
+  if (sleepCutoff > 0 && (sleep_Timer > sleepCutoff || WiFi.softAPgetStationNum() == 0)) {
     sleep();
   }
 
@@ -790,8 +695,9 @@ void loop() {
       }
     }
     if (remaining <= 60000) {
-      int modeLed = (mode == "AccessPoint") ? RED_LED : (mode == "HotSpot") ? GREEN_LED : BLUE_LED;
-      digitalWrite(modeLed, ((millis() / 500) % 2 == 0) ? ON : OFF);
+      // Green blink if internet available, blue blink if AP only
+      int sleepLed = staConnected ? GREEN_LED : BLUE_LED;
+      digitalWrite(sleepLed, ((millis() / 500) % 2 == 0) ? ON : OFF);
     }
   }
 
@@ -811,8 +717,8 @@ void loop() {
         digitalWrite(BLUE_LED, ON);
         digitalWrite(RED_LED, ON);
       } else {
-        drawOledLine("Changing", 2);
-        drawOledLine("Mode", 3);
+        drawOledLine("Hold to", 2);
+        drawOledLine("Restart", 3);
         digitalWrite(RED_LED, ON);
         digitalWrite(GREEN_LED, ON);
         digitalWrite(BLUE_LED, ON);
@@ -865,9 +771,12 @@ void loop() {
       drawOledLine("Avg/page:", 2);
       drawOledLine(avgBuf, 3);
     } else {
-      // Switch mode in super long click
-      logLinenl("Super long click detected");
-      switchMode();
+      // Restart on super-long press
+      logLinenl("Super long click - restarting.");
+      drawOledLine("Restarting", 2);
+      drawOledLine("...", 3);
+      delay(1000);
+      ESP.restart();
     }
   }
 }

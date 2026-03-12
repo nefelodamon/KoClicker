@@ -187,19 +187,16 @@ void drawOledLine(const char* text, int line) {
   u8g2.setDrawColor(0);
   u8g2.drawBox(0, OLED_Y(0) - asc, DISP_W, lineH);
   u8g2.setDrawColor(1);
-  const char* modeLabel = mode == "Home" ? "HM" : mode == "AccessPoint" ? "AP" : "HS";
+  // Left: AP+ if upstream connected, AP if not
+  const char* modeLabel = staConnected ? "AP+" : "AP";
   u8g2.drawStr(OLED_X(0), OLED_Y(0), modeLabel);
+  // Right: page counter
   char cntBuf[8];
   snprintf(cntBuf, sizeof(cntBuf), "%d", pageCounter);
   u8g2.drawStr(DISP_W - u8g2.getStrWidth(cntBuf), OLED_Y(0), cntBuf);
+  // Centre: AP station count (Kindle connected indicator)
   char sigBuf[8];
-  if (mode == "AccessPoint") {
-    snprintf(sigBuf, sizeof(sigBuf), "%dST", WiFi.softAPgetStationNum());
-  } else if (WiFi.status() != WL_CONNECTED) {
-    snprintf(sigBuf, sizeof(sigBuf), "--");
-  } else {
-    snprintf(sigBuf, sizeof(sigBuf), "%ddB", WiFi.RSSI());
-  }
+  snprintf(sigBuf, sizeof(sigBuf), "%dST", WiFi.softAPgetStationNum());
   u8g2.drawStr((DISP_W - u8g2.getStrWidth(sigBuf)) / 2, OLED_Y(0), sigBuf);
 
   // line == 0: clear entire screen

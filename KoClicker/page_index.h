@@ -34,10 +34,15 @@ String buildIndexHtml() {
   // Add placeholder text under H1
   html += F("<p>KoClicker index page</p>");
 
-  html += F("<div class='card'><div><strong>Current mode: </strong> <span class='path'>");
-  html += mode;
-  html += F("</span></div><div><strong>Kindle IP Address: </strong> <span class='path'>");
+  html += F("<div class='card'>");
+  html += F("<div><strong>KoClicker IP:</strong> <span class='path'>");
+  html += KoClickerIpAddress;
+  html += F("</span></div>");
+  html += F("<div><strong>Kindle IP:</strong> <span class='path'>");
   html += kindleIpAddress;
+  html += F("</span></div>");
+  html += F("<div><strong>Internet:</strong> <span class='path'>");
+  html += staConnected ? "Connected" : "Not connected";
   html += F("</span></div></div>");
 
   for (size_t i = 0; i < PAGES_COUNT; ++i) {
