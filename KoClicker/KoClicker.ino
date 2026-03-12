@@ -92,7 +92,6 @@ bool pendingRestart = false;
 bool staConnected = false;
 bool pendingWifiReconnect = false;
 unsigned long wifiReconnectAt = 0;
-int wifiNetworkAttempt = 0;
 //---------------------------------------------------------------------------//
 
 #include "c3_oled.h"
@@ -234,20 +233,39 @@ void sleep() {
 }
 
 void connectToUpstreamWifi() {
-  if (hsSsid.length() == 0 && hmSsid.length() == 0) {
+  if (hmSsid.length() == 0 && hsSsid.length() == 0) {
     logLinenl("No upstream WiFi networks configured.");
     return;
   }
-  // Alternate between network 1 (hs) and network 2 (hm) on each attempt
-  bool tryNet1 = (wifiNetworkAttempt % 2 == 0) ? (hsSsid.length() > 0) : false;
-  if (tryNet1 || hmSsid.length() == 0) {
-    logLinenl("Connecting to WiFi Network 1: %s", hsSsid.c_str());
-    WiFi.begin(hsSsid.c_str(), hsPass.c_str());
-  } else {
-    logLinenl("Connecting to WiFi Network 2: %s", hmSsid.c_str());
-    WiFi.begin(hmSsid.c_str(), hmPass.c_str());
+
+  logLinenl("Scanning for upstream WiFi networks...");
+  int n = WiFi.scanNetworks();
+  logLinenl("Scan complete. %d networks found.", n);
+
+  bool net1Found = false, net2Found = false;
+  for (int i = 0; i < n; i++) {
+    if (hmSsid.length() > 0 && WiFi.SSID(i) == hmSsid) net1Found = true;
+    if (hsSsid.length() > 0 && WiFi.SSID(i) == hsSsid) net2Found = true;
   }
-  wifiNetworkAttempt++;
+  WiFi.scanDelete();
+
+  String foundSsid, foundPass;
+  if (net1Found) {
+    foundSsid = hmSsid;
+    foundPass = hmPass;
+    logLinenl("WiFi Network 1 found: %s", foundSsid.c_str());
+  } else if (net2Found) {
+    foundSsid = hsSsid;
+    foundPass = hsPass;
+    logLinenl("WiFi Network 2 found: %s", foundSsid.c_str());
+  } else {
+    logLinenl("No configured upstream networks visible. Retrying in 30s.");
+    pendingWifiReconnect = true;
+    wifiReconnectAt = millis() + 30000;
+    return;
+  }
+
+  WiFi.begin(foundSsid.c_str(), foundPass.c_str());
 }
 
 void pageTurn(int direction, int waitTime) {
